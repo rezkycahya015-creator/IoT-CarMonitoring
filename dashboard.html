@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard – CarMonitor IoT</title>
+    <meta name="description"
+        content="Dashboard monitoring kendaraan real-time: kecepatan, RPM, GPS, dan skor eco-driving." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <style>
+        /* Additional dashboard-specific tweaks */
+        .gauge-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        @media (min-width: 1280px) {
+            .gauge-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .gauge-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 1024px) {
+            .main-grid {
+                grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+            }
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Semi-circle gauge overlay */
+        .semi-gauge-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 180px;
+            margin: 0 auto;
+        }
+
+        .semi-gauge-center {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            width: 100%;
+        }
+
+        .obd-badge {
+            background: linear-gradient(135deg, var(--primary), #2563EB);
+            color: white;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fuel-bar-track {
+            height: 14px;
+            background: #F1F5F9;
+            border-radius: 99px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .fuel-bar-fill {
+            height: 100%;
+            border-radius: 99px;
+            background: linear-gradient(90deg, #EF4444 0%, #F59E0B 30%, #10B981 70%);
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .history-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #F1F5F9;
+            font-size: 13px;
+        }
+
+        .history-row:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast-container"></div>
+
+    <!-- ==========================================================================
+     APP CONTAINER
+     ========================================================================== -->
+    <div class="app-container">
+
+        <!-- Sidebar Overlay (mobile) -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- ======================================================================
+         SIDEBAR
+         ====================================================================== -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Brand -->
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fa-solid fa-car-side"></i></div>
+                <div class="brand-text">
+                    <span class="brand-title">CarMonitor</span>
+                    <span class="brand-sub">IoT Dashboard</span>
+                </div>
+            </div>
+
+            <!-- Vehicle info chip -->
+            <div
+                style="margin: 12px; background: rgba(255,255,255,0.07); border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1);">
+                <div
+                    style="font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">
+                    Kendaraan Aktif</div>
+                <div style="font-size: 13px; font-weight: 700; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                    id="sidebar-vehicle-name">–</div>
+                <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;" id="sidebar-device-id">–
+                </div>
+            </div>
+
+            <div class="sidebar-section-label">Navigasi</div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item" data-page="dashboard">
+                    <i class="nav-icon fa-solid fa-gauge-high"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="diagnostic.html" class="nav-item" data-page="diagnostic">
+                    <i class="nav-icon fa-solid fa-stethoscope"></i>
+                    <span>Diagnostik OBD2</span>
+                    <span class="nav-badge" id="dtc-count-badge" style="display:none">!</span>
+                </a>
+                <a href="history.html" class="nav-item" data-page="history">
+                    <i class="nav-icon fa-solid fa-route"></i>
+                    <span>Riwayat Perjalanan</span>
+                </a>
+                <a href="reports.html" class="nav-item" data-page="reports">
+                    <i class="nav-icon fa-solid fa-chart-bar"></i>
+                    <span>Laporan</span>
+                </a>
+                <a href="settings.html" class="nav-item" data-page="settings">
+                    <i class="nav-icon fa-solid fa-gear"></i>
+                    <span>Pengaturan</span>
+                </a>
+
+                <div class="sidebar-section-label" style="padding-top:12px">Aksi Cepat</div>
+                <a href="#" class="nav-item" onclick="openModal('pairing-modal')" style="color:var(--accent);">
+                    <i class="nav-icon fa-solid fa-plus-circle"></i>
+                    <span>Tambah Kendaraan</span>
+                </a>
+
+                <div class="sidebar-section-label" id="admin-section-label" style="padding-top:12px">Admin</div>
+                <a href="admin.html" class="nav-item">
+                <a href="admin.html" class="nav-item" id="admin-nav-item">
+                    <i class="nav-icon fa-solid fa-shield-halved"></i>
+                    <span>Fleet Management</span>
+                </a>
+            </nav>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="sidebar-user" onclick="logout()">
+                    <div class="avatar" data-user-avatar>?</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                            data-user-name>–</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.45)" data-user-email>–</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right-from-bracket"
+                        style="color:rgba(255,255,255,0.35);font-size:13px"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ======================================================================
+         MAIN CONTENT
+         ====================================================================== -->
+        <div class="main-content">
+
+            <!-- Top Navbar -->
+            <header class="topbar">
+                <button class="hamburger-btn" id="hamburger-btn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div>
+                    <div class="topbar-title">Dashboard Kendaraan</div>
+                    <div class="breadcrumb">Real-time Monitoring • <span id="topbar-vehicle">–</span></div>
+                </div>
+                <div style="flex:1"></div>
+
+                <!-- Vehicle Switcher (Admin/Multi-Vehicle) -->
+                <div id="vehicle-switcher-container" style="display:none; position:relative; margin-right:12px;">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleVehicleSwitcher(event)" id="vehicle-switcher-btn" style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border-glass)">
+                        <i class="fa-solid fa-car-side" style="color:var(--accent)"></i>
+                        <span id="switcher-current-name" style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kendaraan</span>
+                        <i class="fa-solid fa-chevron-down" style="font-size:10px;color:var(--text-muted)"></i>
+                    </button>
+                    <!-- Dropdown -->
+                    <div id="vehicle-switcher-dropdown" style="display:none; position:absolute; top:110%; right:0; width:220px; background:var(--surface); border:1px solid var(--border-glass); border-radius:12px; box-shadow:var(--shadow-card); z-index:1000; overflow:hidden;">
+                        <!-- JS populated items -->
+                    </div>
+                </div>
+
+                <!-- Connection Status -->
+                <div class="status-badge status-online" id="connection-status">
+                    <div class="status-dot"></div>
+                    Online
+                </div>
+
+                <!-- DTC Alert shortcut -->
+                <a href="diagnostic.html" title="Lihat DTC"
+                    style="position:relative;width:36px;height:36px;background:var(--bg);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);text-decoration:none;transition:var(--transition);"
+                    onmouseover="this.style.background='#E2E8F0'" onmouseout="this.style.background='var(--bg)'">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:15px"></i>
+                    <span id="topbar-dtc-dot"
+                        style="display:none;position:absolute;top:6px;right:6px;width:8px;height:8px;background:#EF4444;border-radius:50%;border:2px solid white;"></span>
+                </a>
+
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <!-- Theme Toggle -->
+                    <button class="btn btn-secondary" id="theme-toggle" onclick="toggleTheme()" style="width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%">
+                        <i class="fa-solid fa-moon" id="theme-icon"></i>
+                    </button>
+                    <!-- User avatar -->
+                    <div style="width:36px;height:36px;border-radius:50%;cursor:pointer" onclick="logout()">
+                        <div class="avatar" data-user-avatar style="width:36px;height:36px;font-size:13px">?</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <main class="page-content" id="page-content">
+
+                <!-- Maintenance Alert (Hidden by default) -->
+                <div id="maintenance-alert" style="display:none; margin-bottom:16px;"></div>
+
+                <!-- ──────────────────────────────────────────────────────────
+                 CAN SCANNER METRICS (NEW)
+                 ────────────────────────────────────────────────────────── -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:16px;">
+                    <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
+                        <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">Distance Travelled</div>
+                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1" id="val-distance">0.00</div>
+                        <div style="font-size:13px; font-weight:500; color:var(--text-secondary)">km</div>
+                    </div>
+                    <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
+                        <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">Fuel Used</div>
+                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1" id="val-fuel-used">0.0</div>
+                        <div style="font-size:13px; font-weight:500; color:var(--text-secondary)">L</div>
+                    </div>
+                    <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
+                        <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">Avg Fuel Cons.</div>
+                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1" id="val-avg-fuel">0.0</div>
+                        <div style="font-size:13px; font-weight:500; color:var(--text-secondary)">L/100km</div>
+                    </div>
+                    <!-- Added Inst. Fuel Cons to match app -->
+                    <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
+                        <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">Inst. Fuel Rate</div>
+                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1" id="val-inst-fuel">0.00</div>
+                        <div style="font-size:13px; font-weight:500; color:var(--text-secondary)">L/h</div>
+                    </div>
+                </div>
+
+                <!-- ──────────────────────────────────────────────────────────
+                 LIVE GAUGES ROW
+                 ────────────────────────────────────────────────────────── -->
+                <div class="gauge-grid" style="margin-bottom:16px;">
+
+                    <!-- Speed Gauge -->
+                    <div class="card" style="padding:20px;text-align:center">
+                        <div
+                            style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">
+                            <i class="fa-solid fa-gauge-high" style="color:var(--accent);margin-right:4px"></i>Kecepatan
+                        </div>
+                        <div class="semi-gauge-wrap">
+                            <canvas id="gauge-speed" width="180" height="100"></canvas>
+                            <div class="semi-gauge-center">
+                                <div class="gauge-value" id="val-speed">0</div>
+                                <div class="gauge-unit">km/h</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">
+                            Maks: <span id="max-speed-today" style="font-weight:700;color:var(--text-primary)">0</span>
+                            km/h
+                        </div>
+                    </div>
+
+                    <!-- RPM Gauge -->
+                    <div class="card" style="padding:20px;text-align:center">
+                        <div
+                            style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">
+                            <i class="fa-solid fa-rotate" style="color:#A855F7;margin-right:4px"></i>Engine RPM
+                        </div>
+                        <div class="semi-gauge-wrap">
+                            <canvas id="gauge-rpm" width="180" height="100"></canvas>
+                            <div class="semi-gauge-center">
+                                <div class="gauge-value" id="val-rpm">0</div>
+                                <div class="gauge-unit">RPM</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">
+                            Idle: <span style="font-weight:700;color:var(--text-primary)">800</span> RPM
+                        </div>
+                    </div>
+
+                    <!-- Engine Temp Gauge -->
+                    <div class="card" style="padding:20px;text-align:center">
+                        <div
+                            style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">
+                            <i class="fa-solid fa-temperature-half" style="color:#EF4444;margin-right:4px"></i>Suhu
+                            Mesin
+                        </div>
+                        <div class="semi-gauge-wrap">
+                            <canvas id="gauge-temp" width="180" height="100"></canvas>
+                            <div class="semi-gauge-center">
+                                <div class="gauge-value" id="val-temp">0</div>
+                                <div class="gauge-unit">°C</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px">
+                            <span class="status-badge status-online" id="temp-status"
+                                style="font-size:10px">Normal</span>
+                        </div>
+                    </div>
+
+                    <!-- Fuel Gauge -->
+                    <div class="card" style="padding:20px">
+                        <div
+                            style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px">
+                            <i class="fa-solid fa-gas-pump" style="color:#F59E0B;margin-right:4px"></i>Bahan Bakar
+                        </div>
+                        <!-- Big fuel display -->
+                        <div style="display:flex;align-items:flex-end;gap:4px;margin-bottom:12px;">
+                            <div style="font-size:42px;font-weight:900;line-height:1;color:var(--text-primary)"
+                                id="val-fuel-ltr">--</div>
+                            <div style="font-size:14px;color:var(--text-muted);margin-bottom:6px">L</div>
+                            <div style="font-size:18px;font-weight:700;color:var(--text-primary);margin-left:8px;"
+                                id="val-fuel-pct">(72%)</div>
+                        </div>
+                        <!-- Fuel bar -->
+                        <div class="fuel-bar-track" style="margin-bottom:8px">
+                            <div class="fuel-bar-fill" id="fuel-bar" style="width:72%"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)">
+                            <span>E</span>
+                            <span id="fuel-est" style="font-weight:600;color:var(--text-secondary)">Est. ~260 km</span>
+                            <span>F</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ──────────────────────────────────────────────────────────
+                 MAIN BODY: MAP + SIDE WIDGETS
+                 ────────────────────────────────────────────────────────── -->
+                <div class="main-grid">
+
+                    <!-- LEFT: MAP -->
+                    <div class="card" style="display:flex;flex-direction:column;min-height:400px;">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <div class="card-title-icon" style="background:rgba(6,182,212,0.1);color:var(--accent)">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                </div>
+                                Lokasi Real-Time
+                            </div>
+                            <div style="display:flex;gap:8px;align-items:center">
+                                <span class="status-badge status-online" style="font-size:10px" id="gps-status">
+                                    <div class="status-dot"></div>GPS Aktif
+                                </span>
+                                <button class="btn btn-secondary btn-xs" onclick="centerMap()"
+                                    title="Fokus ke kendaraan">
+                                    <i class="fa-solid fa-crosshairs"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div style="flex:1;padding:12px 12px 12px;">
+                            <div class="map-container" id="main-map" style="height:100%;min-height:300px;"></div>
+                        </div>
+                        <!-- GPS info row -->
+                        <div
+                            style="padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;gap:20px;flex-wrap:wrap">
+                            <div style="font-size:12px;color:var(--text-muted)">
+                                <i class="fa-solid fa-map-pin" style="color:var(--accent);margin-right:4px"></i>
+                                Lat: <span id="gps-lat"
+                                    style="font-weight:600;color:var(--text-primary)">–</span>&nbsp;|&nbsp;
+                                Lng: <span id="gps-lng" style="font-weight:600;color:var(--text-primary)">–</span>
+                            </div>
+                            <div style="font-size:12px;color:var(--text-muted)">
+                                <i class="fa-solid fa-clock" style="color:var(--accent);margin-right:4px"></i>
+                                Update: <span id="gps-time" style="font-weight:600;color:var(--text-primary)">–</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Status + Eco Score -->
+                    <div style="display:flex;flex-direction:column;gap:16px;">
+
+                        <!-- Status & Security Card -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <div class="card-title-icon"
+                                        style="background:rgba(30,58,138,0.08);color:var(--primary)">
+                                        <i class="fa-solid fa-shield-halved"></i>
+                                    </div>
+                                    Status & Keamanan
+                                </div>
+                            </div>
+                            <div class="card-body" style="padding:16px">
+                                <!-- Engine Status -->
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #F1F5F9">
+                                    <div style="display:flex;align-items:center;gap:10px">
+                                        <div
+                                            style="width:38px;height:38px;border-radius:10px;background:rgba(16,185,129,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:#10B981">
+                                            <i class="fa-solid fa-power-off"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:12px;color:var(--text-muted)">Mesin</div>
+                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)"
+                                                id="engine-status-text">Menyala</div>
+                                        </div>
+                                    </div>
+                                    <span class="status-badge status-online" id="engine-badge">
+                                        <div class="status-dot"></div> ON
+                                    </span>
+                                </div>
+
+                                <!-- Connection Status -->
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #F1F5F9">
+                                    <div style="display:flex;align-items:center;gap:10px">
+                                        <div
+                                            style="width:38px;height:38px;border-radius:10px;background:rgba(6,182,212,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--accent)">
+                                            <i class="fa-solid fa-wifi"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:12px;color:var(--text-muted)">Koneksi ESP32</div>
+                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)"
+                                                id="connection-text">Online</div>
+                                        </div>
+                                    </div>
+                                    <span class="status-badge status-online" id="connection-badge">
+                                        <div class="status-dot"></div> Aktif
+                                    </span>
+                                </div>
+
+                                <!-- Battery Voltage -->
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #F1F5F9">
+                                    <div style="display:flex;align-items:center;gap:10px">
+                                        <div
+                                            style="width:38px;height:38px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:#F59E0B">
+                                            <i class="fa-solid fa-car-battery"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:12px;color:var(--text-muted)">Tegangan Aki</div>
+                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)"
+                                                id="val-voltage">12.6 V</div>
+                                        </div>
+                                    </div>
+                                    <span class="status-badge status-online" id="battery-badge">Normal</span>
+                                </div>
+
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #F1F5F9">
+                                    <div style="display:flex;align-items:center;gap:10px">
+                                        <div
+                                            style="width:38px;height:38px;border-radius:10px;background:rgba(139,92,246,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:#8B5CF6">
+                                            <i class="fa-solid fa-draw-polygon"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:12px;color:var(--text-muted)">Alarm Geofence</div>
+                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)"
+                                                id="geofence-text">Nonaktif</div>
+                                        </div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="geofence-toggle" onchange="toggleGeofence(this)" />
+                                        <div class="toggle-track">
+                                            <div class="toggle-thumb"></div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <!-- Remote Cut-Off -->
+                                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-glass)">
+                                    <div style="display:flex;align-items:center;gap:10px">
+                                        <div style="width:38px;height:38px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:#EF4444">
+                                            <i class="fa-solid fa-power-off"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:12px;color:var(--text-muted)">Cut-Off Mesin</div>
+                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)" id="cutoff-text">Nonaktif</div>
+                                        </div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="cutoff-toggle" onchange="toggleCutoff(this)" />
+                                        <div class="toggle-track" style="background:var(--bg)">
+                                            <div class="toggle-thumb" style="background:#EF4444"></div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <!-- Live Mode (Diagnostik 1s) -->
+                                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0">
+                                    <div style="display:flex;align-items:center;gap:10px">
+                                        <div style="width:38px;height:38px;border-radius:10px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:#3B82F6">
+                                            <i class="fa-solid fa-bolt"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:12px;color:var(--text-muted)">Mode Diagnostik</div>
+                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)" id="live-interval-text">Mati (Hemat Data)</div>
+                                        </div>
+                                    </div>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="live-interval-toggle" onchange="toggleLiveMode(this)" />
+                                        <div class="toggle-track" style="background:var(--bg)">
+                                            <div class="toggle-thumb" style="background:#3B82F6"></div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Eco Driving Score Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-title-icon" style="background:rgba(16,185,129,0.1);color:#10B981">
+                                <i class="fa-solid fa-leaf"></i>
+                            </div>
+                            Skor Eco-Driving
+                        </div>
+                        <span class="status-badge status-online" style="font-size:10px">Hari ini</span>
+                    </div>
+                    <div class="card-body" style="padding:16px">
+                        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+                            <div class="eco-grade eco-B" id="eco-grade">B</div>
+                            <div style="flex:1">
+                                <div style="font-size:22px;font-weight:800;color:var(--text-primary);line-height:1"
+                                    id="eco-score">75</div>
+                                <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">/ 100 Poin
+                                </div>
+                                <div style="font-size:12px;font-weight:600;color:var(--text-secondary)" id="eco-advice">
+                                    Berkendara cukup baik, pertahankan.</div>
+                            </div>
+                        </div>
+
+                        <!-- Score breakdown bars -->
+                        <div style="margin-bottom:16px">
+                            <div class="progress-gauge" style="margin-bottom:8px">
+                                <div class="progress-gauge-header">
+                                    <span class="progress-gauge-label">Kecepatan Rata-Rata</span>
+                                    <span class="progress-gauge-value" id="eco-avg-speed">–</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="progress-fill" id="eco-bar-speed"
+                                        style="width:0%;background:linear-gradient(90deg,#10B981,#3B82F6)">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="progress-gauge">
+                                <div class="progress-gauge-header">
+                                    <span class="progress-gauge-label">Konsistensi Kecepatan</span>
+                                    <span class="progress-gauge-value" id="eco-consistency">–</span>
+                                </div>
+                                <div class="progress-track">
+                                    <div class="progress-fill" id="eco-bar-consistency"
+                                        style="width:0%;background:linear-gradient(90deg,#8B5CF6,#06B6D4)">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mini sparkline chart -->
+                        <div style="height:70px;position:relative">
+                            <canvas id="chart-speed-history"></canvas>
+                        </div>
+                        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:4px">
+                            Riwayat Kecepatan (10 detik terakhir)
+                        </div>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+    <!-- ──────────────────────────────────────────────────────────
+                 ADDITIONAL OBD2 DETAIL ROW
+                 ────────────────────────────────────────────────────────── -->
+    <div class="detail-grid" style="margin-top:16px">
+
+        <!-- OBD2 Sensor Details -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-title-icon" style="background:rgba(30,58,138,0.08);color:var(--primary)">
+                        <i class="fa-solid fa-microchip"></i>
+                    </div>
+                    Data Sensor OBD2
+                </div>
+                <a href="diagnostic.html" style="text-decoration:none">
+                    <button class="btn btn-secondary btn-xs">Detail <i class="fa-solid fa-arrow-right"></i></button>
+                </a>
+            </div>
+            <div class="card-body" style="padding:0">
+                <div style="padding:0 4px">
+                    <div class="history-row" style="padding:12px 16px">
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)">
+                            <i class="fa-solid fa-thermometer-half" style="width:14px;color:#EF4444"></i>Suhu Udara
+                            Masuk
+                        </div>
+                        <span id="obd-intake-temp"
+                            style="font-size:13px;font-weight:700;color:var(--text-primary)">–</span>
+                    </div>
+                    <div class="history-row" style="padding:12px 16px">
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)">
+                            <i class="fa-solid fa-weight-scale" style="width:14px;color:#8B5CF6"></i>Beban
+                            Mesin (Engine Load)
+                        </div>
+                        <span id="obd-engine-load"
+                            style="font-size:13px;font-weight:700;color:var(--text-primary)">–</span>
+                    </div>
+                    <div class="history-row" style="padding:12px 16px">
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)">
+                            <i class="fa-solid fa-sliders" style="width:14px;color:#3B82F6"></i>Throttle
+                            Position
+                        </div>
+                        <span id="obd-throttle"
+                            style="font-size:13px;font-weight:700;color:var(--text-primary)">–</span>
+                    </div>
+                    <div class="history-row" style="padding:12px 16px">
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)">
+                            <i class="fa-solid fa-wind" style="width:14px;color:#06B6D4"></i>Air Mass Flow
+                            (MAF)
+                        </div>
+                        <span id="obd-maf" style="font-size:13px;font-weight:700;color:var(--text-primary)">–</span>
+                    </div>
+                    <div class="history-row" style="padding:12px 16px">
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)">
+                            <i class="fa-solid fa-car-battery" style="width:14px;color:#F59E0B"></i>Tegangan
+                            Akumulator
+                        </div>
+                        <span id="obd-voltage-detail"
+                            style="font-size:13px;font-weight:700;color:var(--text-primary)">–</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trip Statistics -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <div class="card-title-icon" style="background:rgba(6,182,212,0.1);color:var(--accent)">
+                        <i class="fa-solid fa-route"></i>
+                    </div>
+                    Statistik Perjalanan
+                </div>
+                <span style="font-size:11px;color:var(--text-muted);font-weight:500">Sesi saat ini</span>
+            </div>
+            <div class="card-body" style="padding:0">
+                <div style="padding:0 4px">
+                    <div class="history-row" style="padding:12px 16px">
+                        <div style="font-size:12px;color:var(--text-muted)"><i class="fa-solid fa-road"
+                                style="width:14px;color:var(--accent)"></i>&nbsp;Jarak Tempuh</div>
+                        <span id="trip-distance" style="font-size:13px;font-weight:700;color:var(--text-primary)">0.0
+                            km</span>
+                    </div>
+                    <div class="history-row" style="padding:12px 16px">
+                        <div style="font-size:12px;color:var(--text-muted)"><i class="fa-solid fa-clock"
+                                style="width:14px;color:var(--accent)"></i>&nbsp;Durasi Perjalanan</div>
+                        <span id="trip-duration"
+                            style="font-size:13px;font-weight:700;color:var(--text-primary)">0:00</span>
+                    </div>
+                    <div class="history-row" style="padding:12px 16px">
+                        <div style="font-size:12px;color:var(--text-muted)"><i class="fa-solid fa-gauge-high"
+                                style="width:14px;color:var(--accent)"></i>&nbsp;Kecepatan Rata-Rata</div>
+                        <span id="trip-avg-speed" style="font-size:13px;font-weight:700;color:var(--text-primary)">0
+                            km/h</span>
+                    </div>
+                    <div class="history-row" style="padding:12px 16px">
+                        <div style="font-size:12px;color:var(--text-muted)"><i class="fa-solid fa-flag-checkered"
+                                style="width:14px;color:var(--accent)"></i>&nbsp;Kecepatan Tertinggi</div>
+                        <span id="trip-max-speed" style="font-size:13px;font-weight:700;color:var(--text-primary)">0
+                            km/h</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </main>
+    </div>
+    </div>
+
+    <!-- ==========================================================================
+     DEVICE PAIRING MODAL (DUPLICATE DARI INDEX.HTML)
+     ========================================================================== -->
+    <div class="modal-overlay" id="pairing-modal" style="display:none;">
+        <div class="modal-box">
+            <!-- Modal Header -->
+            <div class="modal-header" style="background:linear-gradient(135deg,var(--primary),#1E40AF);padding:24px;">
+                <div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                        <div style="width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:white;">
+                            <i class="fa-solid fa-link"></i>
+                        </div>
+                        <h2 style="font-size:16px;font-weight:700;color:white;">Tambah Kendaraan</h2>
+                    </div>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.65);">Hubungkan perangkat ESP32 OBD2 Anda</p>
+                </div>
+            </div>
+
+            <div class="modal-body">
+                <!-- Step indicators -->
+                <div style="display:flex;margin-bottom:24px;">
+                    <div class="pairing-step-item flex-1 active-step" id="step-ind-1" style="border-radius:10px 0 0 10px;margin-bottom:0;border-right:none;text-align:center;">
+                        <i class="fa-solid fa-link" style="color:#06B6D4"></i> Info
+                    </div>
+                    <div class="pairing-step-item flex-1" id="step-ind-2" style="border-radius:0;margin-bottom:0;border-right:none;text-align:center;">
+                        <i class="fa-solid fa-spinner"></i> Hubungkan
+                    </div>
+                    <div class="pairing-step-item flex-1" id="step-ind-3" style="border-radius:0 10px 10px 0;margin-bottom:0;text-align:center;">
+                        <i class="fa-regular fa-circle-check"></i> Selesai
+                    </div>
+                </div>
+
+                <!-- STEP 1: Enter Device Info -->
+                <div class="device-step active" id="device-step-1">
+                    <div class="form-group">
+                        <label class="form-label">ID Perangkat (Device ID)</label>
+                        <div class="input-icon-wrap">
+                            <i class="input-icon fa-solid fa-microchip"></i>
+                            <input type="text" id="device-id" class="form-input" placeholder="Contoh: ESP32-A1B2C3" style="font-family:monospace;letter-spacing:0.05em;font-weight:600" maxlength="20" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">PIN Pairing (6 digit)</label>
+                        <div class="input-icon-wrap" style="position:relative">
+                            <i class="input-icon fa-solid fa-key"></i>
+                            <input type="password" id="device-pin" class="form-input" placeholder="● ● ● ● ● ●" maxlength="6" style="letter-spacing:0.2em;padding-right:40px" inputmode="numeric" pattern="[0-9]*" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nama Kendaraan / Alias</label>
+                        <div class="input-icon-wrap">
+                            <i class="input-icon fa-solid fa-car"></i>
+                            <input type="text" id="vehicle-name" class="form-input" placeholder="Contoh: Toyota Avanza - Pribadi" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nomor Polisi</label>
+                        <div class="input-icon-wrap">
+                            <i class="input-icon fa-solid fa-id-card"></i>
+                            <input type="text" id="vehicle-plate" class="form-input" placeholder="Contoh: B 1234 ABC" style="text-transform:uppercase" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Connecting Animation -->
+                <div class="device-step" id="device-step-2" style="display:none;">
+                    <div style="text-align:center;padding:20px 0;">
+                        <h3 style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Menghubungkan...</h3>
+                        <p id="pairing-status-msg" style="font-size:13px;color:var(--text-muted);">Memverifikasi ID Perangkat & PIN...</p>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Success -->
+                <div class="device-step" id="device-step-3" style="display:none;">
+                    <div style="text-align:center;padding:20px 0;">
+                        <h3 style="font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">Terhubung!</h3>
+                        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Kendaraan berhasil ditambahkan.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" id="pairing-footer">
+                <button class="btn btn-secondary" onclick="closeModal('pairing-modal')">Batal</button>
+                <button class="btn btn-primary" id="pairing-next-btn" onclick="handleDashboardPairing()">
+                    <i class="fa-solid fa-link"></i> Hubungkan
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // ============================================================================
+        // DASHBOARD PAGE LOGIC
+        // ============================================================================
+
+        let map, carMarker, tileLayer;
+        let gaugeSpeed, gaugeRpm, gaugeTemp;
+        let sparklineChart;
+        let speedHistory = [];
+        let gpsInterval;
+        let savedStats = JSON.parse(localStorage.getItem('car_monitor_trip_stats')) || { distance: 0, fuelUsed: 0, maxSpeed: 0, startTime: Date.now() };
+        let tripStartTime = savedStats.startTime;
+        let tripDistance = savedStats.distance || 0;
+        let tripFuelUsed = savedStats.fuelUsed || 0;
+        let lastGPSPos = null;
+        let maxSpeedToday = savedStats.maxSpeed || 0;
+        let speedReadings = [];
+        let currentSettings = null;
+        let lastSensorTimestamp = 0;
+        let appLastCalcTime = Date.now();
+
+        // ---- INIT ----
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auth guard
+            const user = requireAuth(['user', 'admin']);
+            if (!user) return;
+
+            initVehicleSwitcher();
+
+            fetchSettings(user.uid, (settings) => {
+                currentSettings = settings;
+                if (settings && settings.geofenceGeoJSON && map) {
+                    L.geoJSON(settings.geofenceGeoJSON, {
+                        style: {
+                            color: '#8B5CF6',
+                            weight: 2,
+                            fillColor: '#8B5CF6',
+                            fillOpacity: 0.15
+                        }
+                    }).addTo(map);
+                }
+            });
+
+            const vehicle = AppState.currentVehicle;
+            populateUserUI();
+            setActiveNavItem();
+            initSidebar();
+
+            // Populate vehicle info
+            const vname = vehicle?.vehicleName || 'Kendaraan Demo';
+            const devId = vehicle?.deviceId || 'ESP32-DEMO';
+            document.getElementById('sidebar-vehicle-name').textContent = vname;
+            document.getElementById('sidebar-device-id').textContent = devId;
+            document.getElementById('topbar-vehicle').textContent = vehicle?.plateNumber || '–';
+
+            // Init map
+            initMap();
+
+            // Init gauges
+            initGauges();
+
+            // Init sparkline
+            sparklineChart = createSparklineChart('chart-speed-history', new Array(20).fill(0), '#06B6D4');
+
+            // Start live data
+            fetchLiveSensorData(devId, onSensorUpdate);
+            gpsInterval = updateMapLocation(devId, onGPSUpdate);
+
+            // Update trip timer and connection status
+            setInterval(() => {
+                updateTripStats();
+                checkConnectionStatus();
+            }, 1000);
+
+            // Check DTC count (show badge)
+            fetchDTCCodes(devId, (dtcs) => {
+                if (dtcs && dtcs.length > 0) {
+                    document.getElementById('dtc-count-badge').style.display = 'flex';
+                    document.getElementById('topbar-dtc-dot').style.display = 'block';
+                }
+            });
+        });
+
+        // ---- SENSOR UPDATE CALLBACK ----
+        function onSensorUpdate(data) {
+            if (!data) return;
+
+            const { speed, rpm, engineTemp, fuelLevel, engineLoad, intakeTemp, throttlePos, batteryVoltage, maf, distanceTravelled, fuelUsed, avgFuelUse, instFuelRate, engineOn, timestamp } = data;
+
+            lastSensorTimestamp = timestamp || Date.now();
+
+            // Actual Engine Status Update
+            const engineStatusText = document.getElementById('engine-status-text');
+            const engineBadge = document.getElementById('engine-badge');
+            if (engineStatusText && engineBadge) {
+                if (engineOn) {
+                    engineStatusText.textContent = 'Menyala';
+                    engineBadge.className = 'status-badge status-online';
+                    engineBadge.innerHTML = '<div class="status-dot"></div> ON';
+                } else {
+                    engineStatusText.textContent = 'Mati';
+                    engineBadge.className = 'status-badge status-danger';
+                    engineBadge.innerHTML = 'OFF';
+                }
+            }
+
+            // Update gauge values
+            document.getElementById('val-speed').textContent = speed;
+            document.getElementById('val-rpm').textContent = rpm.toLocaleString('id-ID');
+            document.getElementById('val-temp').textContent = engineTemp;
+            
+            // Menggunakan hasil komputasi dari ESP32 (Edge Computing)
+            if (document.getElementById('val-distance')) {
+                document.getElementById('val-distance').textContent = (distanceTravelled || 0).toFixed(2);
+                document.getElementById('val-fuel-used').textContent = (fuelUsed || 0).toFixed(2);
+                document.getElementById('val-avg-fuel').textContent = (avgKml || 0).toFixed(1);
+                document.getElementById('val-inst-fuel').textContent = (instFuelRate || 0).toFixed(2);
+            }
+            
+            // Perbaikan Bug: Membagi data fuel ke Ltr & Persen (Sesuai ID HTML baru)
+            if (document.getElementById('val-fuel-pct')) {
+                document.getElementById('val-fuel-pct').textContent = `(${Math.round(fuelLevel)}%)`;
+                document.getElementById('val-fuel-ltr').textContent = ((fuelLevel / 100) * 45).toFixed(1); 
+            }
+            
+            if (document.getElementById('val-voltage')) {
+                document.getElementById('val-voltage').textContent = batteryVoltage + ' V';
+            }
+
+            // Routine Maintenance Alert
+            if (currentSettings?.maintenance && distanceTravelled !== undefined) {
+                const alertDiv = document.getElementById('maintenance-alert');
+                const limit = currentSettings.maintenance.lastServiceOdo + currentSettings.maintenance.serviceInterval;
+                const remaining = limit - distanceTravelled;
+                
+                if (remaining <= 500 && remaining > 0) {
+                    alertDiv.style.display = 'block';
+                    alertDiv.className = 'alert-warning';
+                    alertDiv.innerHTML = `<i class="fa-solid fa-screwdriver-wrench"></i> <strong>Jadwal Servis Dekat!</strong> Sisa ${Math.round(remaining)} km sebelum jadwal ganti oli/servis. (Batas: ${limit} km)`;
+                } else if (remaining <= 0) {
+                    alertDiv.style.display = 'block';
+                    alertDiv.className = 'alert-danger';
+                    alertDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> <strong>Perhatian Servis!</strong> Melewati jadwal ganti oli/servis sejauh ${Math.round(-remaining)} km.`;
+                } else {
+                    alertDiv.style.display = 'none';
+                }
+            }
+
+            // Fuel bar & estimate
+            document.getElementById('fuel-bar').style.width = fuelLevel + '%';
+            const estKm = Math.round((fuelLevel / 100) * 450); // assume 45L tank @ 10km/L
+            document.getElementById('fuel-est').textContent = `Est. ~${estKm} km`;
+
+            // OBD2 detail fields
+            document.getElementById('obd-engine-load').textContent = engineLoad + ' %';
+            document.getElementById('obd-intake-temp').textContent = intakeTemp + ' °C';
+            document.getElementById('obd-throttle').textContent = throttlePos + ' %';
+            document.getElementById('obd-maf').textContent = maf + ' g/s';
+            document.getElementById('obd-voltage-detail').textContent = batteryVoltage + ' V';
+
+            // Update gauges (semi-circle charts)
+            updateGaugeChart(gaugeSpeed, speed, 140);
+            updateGaugeChart(gaugeRpm, rpm, 6000);
+            updateGaugeChart(gaugeTemp, engineTemp, 140);
+
+            // Update gauge colors dynamically
+            if (gaugeTemp) {
+                const tempPct = engineTemp / 120;
+                const color = engineTemp > 100 ? '#EF4444' : engineTemp > 90 ? '#F59E0B' : '#10B981';
+                gaugeTemp.data.datasets[0].backgroundColor[0] = color;
+                gaugeTemp.update('none');
+            }
+            if (gaugeRpm) {
+                const rpmColor = rpm > 4500 ? '#EF4444' : rpm > 3000 ? '#F59E0B' : '#A855F7';
+                gaugeRpm.data.datasets[0].backgroundColor[0] = rpmColor;
+                gaugeRpm.update('none');
+            }
+
+            // Temp status badge
+            const tempBadge = document.getElementById('temp-status');
+            if (engineTemp > 100) {
+                tempBadge.className = 'status-badge status-danger';
+                tempBadge.innerHTML = '<div class="status-dot"></div>Terlalu Panas!';
+            } else if (engineTemp > 92) {
+                tempBadge.className = 'status-badge status-warning';
+                tempBadge.innerHTML = '<div class="status-dot"></div>Mendekati Batas';
+            } else {
+                tempBadge.className = 'status-badge status-online';
+                tempBadge.innerHTML = '<div class="status-dot"></div>Normal';
+            }
+
+            // Battery badge
+            const battBadge = document.getElementById('battery-badge');
+            if (batteryVoltage < 11.5) {
+                battBadge.className = 'status-badge status-danger'; battBadge.textContent = 'Lemah!';
+            } else if (batteryVoltage < 12.2) {
+                battBadge.className = 'status-badge status-warning'; battBadge.textContent = 'Rendah';
+            } else {
+                battBadge.className = 'status-badge status-online'; battBadge.textContent = 'Normal';
+            }
+
+            // Max speed tracking
+            if (speed > maxSpeedToday) {
+                maxSpeedToday = speed;
+                document.getElementById('max-speed-today').textContent = maxSpeedToday;
+            }
+
+            // Speed history for eco score & sparkline
+            speedHistory.push(speed);
+            speedReadings.push(speed);
+            if (speedHistory.length > 20) speedHistory.shift();
+            if (speedReadings.length > 100) speedReadings.shift();
+
+            // Update sparkline
+            if (sparklineChart) {
+                sparklineChart.data.labels = speedHistory.map((_, i) => i);
+                sparklineChart.data.datasets[0].data = speedHistory;
+                sparklineChart.update('none');
+            }
+
+            // Update eco score every 5 readings
+            if (speedReadings.length % 5 === 0) updateEcoScore();
+        }
+
+        // ---- GPS UPDATE CALLBACK ----
+        function onGPSUpdate(data) {
+            if (!data) return;
+
+            const { lat, lng } = data;
+
+            // Update info display
+            document.getElementById('gps-lat').textContent = lat.toFixed(5);
+            document.getElementById('gps-lng').textContent = lng.toFixed(5);
+            document.getElementById('gps-time').textContent = new Date().toLocaleTimeString('id-ID');
+
+            if (!map) return;
+
+            const latlng = L.latLng(lat, lng);
+
+            if (!carMarker) {
+                // Create custom icon
+                const icon = L.divIcon({
+                    className: '',
+                    html: `<div style="background:#06B6D4;color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 4px 12px rgba(6,182,212,0.5)"><i class="fa-solid fa-car-side"></i></div>`,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18],
+                });
+                carMarker = L.marker(latlng, { icon }).addTo(map)
+                    .bindPopup(`
+                <div style="font-family:'Inter',sans-serif;min-width:180px;">
+                    <div style="font-weight:800;font-size:14px;color:#0F172A;margin-bottom:4px">${AppState.currentVehicle?.vehicleName || 'Kendaraan'}</div>
+                    <div style="font-size:12px;color:#64748B">${AppState.currentVehicle?.plateNumber || '–'}</div>
+                    <div style="margin-top:8px;font-size:12px;color:#06B6D4;font-weight:600">
+                        <i class="fa-solid fa-gauge-high"></i> ${speed !== undefined ? speed : 0} km/h
+                    </div>
+                </div>
+            `);
+            } else {
+                carMarker.setLatLng(latlng);
+                // Calculate distance for trip stats
+                if (lastGPSPos) {
+                    // Removed simple GPS distance calculation to use more accurate speed integration
+                }
+                lastGPSPos = latlng;
+            }
+        }
+
+        // ---- INIT MAP ----
+        function initMap() {
+            map = L.map('main-map', {
+                center: APP_CONFIG.defaultMapCenter,
+                zoom: APP_CONFIG.defaultMapZoom,
+                zoomControl: false,
+            });
+
+            // Tile layer (CartoDB Minimalist)
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const url = isDark 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+                
+            tileLayer = L.tileLayer(url, {
+                attribution: '© <a href="https://carto.com/">CartoDB</a>',
+                maxZoom: 19,
+            }).addTo(map);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+        }
+
+        document.addEventListener('themeChanged', (e) => {
+            if (!map || !tileLayer) return;
+            const isDark = e.detail === 'dark';
+            const url = isDark 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+            tileLayer.setUrl(url);
+        });
+
+        function centerMap() {
+            if (map && carMarker) {
+                map.setView(carMarker.getLatLng(), 15, { animate: true });
+            }
+        }
+
+        // ---- INIT GAUGES ----
+        function initGauges() {
+            gaugeSpeed = createGaugeChart('gauge-speed', 0, 140, ['#06B6D4', '#E2E8F0']);
+            gaugeRpm = createGaugeChart('gauge-rpm', 0, 6000, ['#A855F7', '#E2E8F0']);
+            gaugeTemp = createGaugeChart('gauge-temp', 0, 140, ['#10B981', '#E2E8F0']);
+        }
+
+        // ---- ECO SCORE ----
+        function updateEcoScore() {
+            const { grade, score, advice } = calculateEcoGrade(speedReadings);
+            const avg = Math.round(speedReadings.reduce((a, b) => a + b, 0) / speedReadings.length);
+            const maxSpd = Math.max(...speedReadings);
+
+            // Update grade card
+            const gradeEl = document.getElementById('eco-grade');
+            const scoreEl = document.getElementById('eco-score');
+            const adviceEl = document.getElementById('eco-advice');
+
+            gradeEl.textContent = grade;
+            gradeEl.className = `eco-grade eco-${grade}`;
+            scoreEl.textContent = score;
+            adviceEl.textContent = advice;
+
+            // Progress bars
+            const speedPct = Math.max(0, Math.min(100, 100 - (avg / 140 * 100) + 40));
+            document.getElementById('eco-avg-speed').textContent = avg + ' km/h';
+            document.getElementById('eco-bar-speed').style.width = speedPct + '%';
+
+            const consistency = Math.max(0, 100 - Math.round((maxSpd - avg) / 140 * 100));
+            document.getElementById('eco-consistency').textContent = consistency + '%';
+            document.getElementById('eco-bar-consistency').style.width = consistency + '%';
+        }
+
+        // ---- TRIP STATS ----
+        function updateTripStats() {
+            const elapsed = Math.floor((Date.now() - tripStartTime) / 1000);
+            const h = Math.floor(elapsed / 3600);
+            const m = Math.floor((elapsed % 3600) / 60);
+            const s = elapsed % 60;
+            const duration = h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+
+            document.getElementById('trip-duration').textContent = duration;
+            document.getElementById('trip-distance').textContent = tripDistance.toFixed(1) + ' km';
+
+            const avg = speedReadings.length ? Math.round(speedReadings.reduce((a, b) => a + b, 0) / speedReadings.length) : 0;
+            document.getElementById('trip-avg-speed').textContent = avg + ' km/h';
+            document.getElementById('trip-max-speed').textContent = maxSpeedToday + ' km/h';
+        }
+
+        // ---- CONNECTION STATUS ----
+        function checkConnectionStatus() {
+            const connText = document.getElementById('connection-text');
+            const connBadge = document.getElementById('connection-badge');
+            const headerConn = document.getElementById('connection-status');
+            
+            // Online if data received within last 60 seconds
+            const isOnline = lastSensorTimestamp > 0 && (Date.now() - lastSensorTimestamp) < 60000;
+            
+            if (isOnline) {
+                if (connText) connText.textContent = 'Online';
+                if (connBadge) {
+                    connBadge.className = 'status-badge status-online';
+                    connBadge.innerHTML = '<div class="status-dot"></div> Aktif';
+                }
+                if (headerConn) {
+                    headerConn.className = 'status-badge status-online';
+                    headerConn.innerHTML = '<div class="status-dot"></div> Online';
+                }
+            } else {
+                if (connText) connText.textContent = 'Offline';
+                if (connBadge) {
+                    connBadge.className = 'status-badge status-danger';
+                    connBadge.innerHTML = 'Nonaktif';
+                }
+                if (headerConn) {
+                    headerConn.className = 'status-badge status-danger';
+                    headerConn.innerHTML = 'Offline';
+                }
+            }
+        }
+
+        // ---- GEOFENCE TOGGLE ----
+        function toggleGeofence(enabled) {
+            AppState.geofenceEnabled = enabled;
+            const label = document.getElementById('geofence-label');
+            const icon = document.getElementById('geofence-icon');
+
+            setGeofenceStatus(AppState.currentVehicle?.deviceId || 'DEMO', enabled).then(() => {
+                if (enabled) {
+                    label.textContent = 'Aktif – Memantau Area';
+                    icon.style.background = 'rgba(16,185,129,0.1)';
+                    icon.style.color = '#10B981';
+                    showToast('Alarm Geofence diaktifkan! 🛡️', 'success');
+                } else {
+                    label.textContent = 'Nonaktif';
+                    icon.style.background = 'rgba(139,92,246,0.1)';
+                    icon.style.color = '#8B5CF6';
+                    showToast('Alarm Geofence dinonaktifkan.', 'info');
+                }
+            });
+        }
+
+        // ---- ADD VEHICLE IN DASHBOARD LOGIC ----
+        let dashPairingStep = 1;
+
+        function handleDashboardPairing() {
+            if (dashPairingStep === 1) {
+                const deviceId = document.getElementById('device-id').value.trim();
+                const pin = document.getElementById('device-pin').value.trim();
+                const vname = document.getElementById('vehicle-name').value.trim();
+                const plate = document.getElementById('vehicle-plate').value.trim();
+
+                if (!deviceId || deviceId.length < 6) {
+                    showToast('Masukkan ID Perangkat yang valid.', 'warning');
+                    return;
+                }
+
+                moveDashPairingStep(2);
+                setTimeout(() => {
+                    const vehicle = {
+                        deviceId: deviceId,
+                        vehicleName: vname || 'Kendaraan Baru',
+                        plateNumber: plate || 'Belum diatur'
+                    };
+                    localStorage.setItem('car_monitor_vehicle', JSON.stringify(vehicle));
+                    
+                    moveDashPairingStep(3);
+                }, 1500);
+
+            } else if (dashPairingStep === 3) {
+                closeModal('pairing-modal');
+                window.location.reload(); // Reload dashboard to show new vehicle
+            }
+        }
+
+        function moveDashPairingStep(step) {
+            document.querySelectorAll('.device-step').forEach(el => el.style.display = 'none');
+            document.getElementById(`device-step-${step}`).style.display = 'block';
+
+            document.querySelectorAll('.pairing-step-item').forEach(el => el.classList.remove('active-step', 'done'));
+            for(let i=1; i<step; i++) document.getElementById(`step-ind-${i}`).classList.add('done');
+            document.getElementById(`step-ind-${step}`).classList.add('active-step');
+
+            const nextBtn = document.getElementById('pairing-next-btn');
+
+            if (step === 2) {
+                nextBtn.disabled = true;
+                nextBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>&nbsp;Menghubungkan...';
+            } else if (step === 3) {
+                nextBtn.disabled = false;
+                nextBtn.innerHTML = '<i class="fa-solid fa-check"></i>&nbsp;Selesai';
+                document.querySelector('#pairing-footer .btn-secondary').style.display = 'none';
+            }
+
+            dashPairingStep = step;
+        }
+
+        // ---- VEHICLE SWITCHER ----
+        function initVehicleSwitcher() {
+            const container = document.getElementById('vehicle-switcher-container');
+            const dropdown = document.getElementById('vehicle-switcher-dropdown');
+            const btnText = document.getElementById('switcher-current-name');
+            const userVehicles = AppState.userVehicles || [];
+            
+            if (userVehicles.length > 1) {
+                container.style.display = 'block';
+                btnText.textContent = AppState.currentVehicle?.vehicleName || 'Pilih Kendaraan';
+                
+                dropdown.innerHTML = userVehicles.map(v => `
+                    <div onclick="switchVehicle('${v.deviceId}')" style="padding:12px 16px; cursor:pointer; border-bottom:1px solid var(--border-glass); display:flex; flex-direction:column; gap:4px; transition:0.2s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+                        <div style="font-weight:700; font-size:13px; color:var(--text-primary)">${v.vehicleName}</div>
+                        <div style="font-size:11px; color:var(--text-muted); font-family:monospace">${v.plateNumber}</div>
+                    </div>
+                `).join('');
+                if(dropdown.lastElementChild) dropdown.lastElementChild.style.borderBottom = 'none';
+            }
+        }
+
+        function toggleVehicleSwitcher(e) {
+            e.stopPropagation();
+            const dd = document.getElementById('vehicle-switcher-dropdown');
+            dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function switchVehicle(deviceId) {
+            const v = AppState.userVehicles.find(x => x.deviceId === deviceId);
+            if (v) {
+                localStorage.setItem('car_monitor_vehicle', JSON.stringify(v));
+                window.location.reload();
+            }
+        }
+        
+        function toggleCutoff(input) {
+            const deviceId = AppState.currentVehicle?.deviceId;
+            if(!deviceId) return;
+            const ref = db.ref(`Devices/${deviceId}/Status/CutOff`);
+            ref.set(input.checked);
+            const txt = document.getElementById('cutoff-text');
+            if (input.checked) {
+                if(txt) txt.textContent = "AKTIF (Mesin Mati)";
+                showToast('Perintah Cut-Off Mesin Dikirim.', 'warning');
+            } else {
+                if(txt) txt.textContent = "Nonaktif";
+                showToast('Cut-Off Mesin Dinonaktifkan.', 'info');
+            }
+        }
+
+        function toggleLiveMode(input) {
+            const deviceId = AppState.currentVehicle?.deviceId;
+            if(!deviceId) return;
+            
+            const txt = document.getElementById('live-interval-text');
+            const ref = db.ref(`Devices/${deviceId}/Config/UpdateOverrideUntil`);
+            
+            if(input.checked) {
+                // Set to 5 minutes from now for ESP32
+                ref.set(Date.now() + 5 * 60 * 1000).then(() => {
+                    if(txt) txt.textContent = "Aktif (1 Detik)";
+                    showToast('Mode Diagnostik Aktif (5 Menit)', 'success');
+                });
+            } else {
+                // Turn off immediately
+                ref.set(0).then(() => {
+                    if(txt) txt.textContent = "Mati (Hemat Data)";
+                    showToast('Kembali ke Mode Hemat (30s)', 'info');
+                });
+            }
+        }
+
+        // Add sync state fetcher for toggles
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = requireAuth(['user', 'admin']);
+            if (user && AppState.currentVehicle) {
+                const deviceId = AppState.currentVehicle.deviceId;
+                
+                db.ref(`Devices/${deviceId}/Status/CutOff`).on('value', (s) => {
+                    const isCutoff = s.val() || false;
+                    const toggle = document.getElementById('cutoff-toggle');
+                    const txt = document.getElementById('cutoff-text');
+                    if (toggle) toggle.checked = isCutoff;
+                    if (txt) txt.textContent = isCutoff ? "AKTIF (Mesin Mati)" : "Nonaktif";
+                });
+
+                db.ref(`Devices/${deviceId}/Config/UpdateOverrideUntil`).on('value', (s) => {
+                    const override = s.val() || 0;
+                    const isActive = override > Date.now();
+                    const toggle = document.getElementById('live-interval-toggle');
+                    const txt = document.getElementById('live-interval-text');
+                    if (toggle) toggle.checked = isActive;
+                    if (txt) txt.textContent = isActive ? "Aktif (1 Detik)" : "Mati (Hemat Data)";
+                    
+                    // Auto-uncheck toggle logic visually if time expires while page is open
+                    if (isActive) {
+                        setTimeout(() => {
+                            if(toggle) toggle.checked = false;
+                            if(txt) txt.textContent = "Mati (Hemat Data)";
+                        }, override - Date.now());
+                    }
+                });
+            }
+        });
+        
+        document.addEventListener('click', (e) => {
+            const container = document.getElementById('vehicle-switcher-container');
+            if (container && !container.contains(e.target)) {
+                const dd = document.getElementById('vehicle-switcher-dropdown');
+                if(dd) dd.style.display = 'none';
+            }
+        });
+
+    </script>
+</body>
+
+</html>

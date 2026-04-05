@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fleet Management – CarMonitor IoT Admin</title>
+    <meta name="description" content="Admin dashboard untuk manajemen armada kendaraan IoT secara real-time." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <style>
+        .fleet-top-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .fleet-top-stats {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .admin-sidebar-label {
+            font-size: 10px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.2));
+            color: #FCA5A5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 2px 8px;
+            border-radius: 99px;
+            margin-left: 6px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .revoke-btn {
+            background: rgba(239, 68, 68, 0.08);
+            color: #EF4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .revoke-btn:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .revoke-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .vehicle-row-moving {
+            border-left: 3px solid #10B981;
+        }
+
+        .vehicle-row-idle {
+            border-left: 3px solid #F59E0B;
+        }
+
+        .vehicle-row-speeding {
+            border-left: 3px solid #EF4444;
+        }
+
+        .vehicle-row-offline {
+            border-left: 3px solid #94A3B8;
+        }
+
+        .marker-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 4px;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
+        .fleet-filter-tab {
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+        }
+
+        .fleet-filter-tab.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .fleet-filter-tab:hover:not(.active) {
+            background: #F1F5F9;
+            color: var(--text-secondary);
+        }
+
+        .device-detail-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+        .device-detail-row .key {
+            color: var(--text-muted);
+            width: 130px;
+            flex-shrink: 0;
+            font-weight: 500;
+        }
+
+        .device-detail-row .val {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast-container"></div>
+
+    <div class="app-container">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon" style="background:linear-gradient(135deg,#EF4444,#DC2626)">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title">CarMonitor</span>
+                    <span class="brand-sub">Admin Panel</span>
+                </div>
+            </div>
+
+            <!-- Admin badge -->
+            <div
+                style="margin:12px;background:rgba(239,68,68,0.15);border-radius:12px;padding:10px 12px;border:1px solid rgba(239,68,68,0.25)">
+                <div
+                    style="font-size:10px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">
+                    Akses</div>
+                <div style="display:flex;align-items:center;gap:6px">
+                    <i class="fa-solid fa-user-shield" style="color:#FCA5A5;font-size:13px"></i>
+                    <span style="font-size:13px;font-weight:700;color:white">Super Admin</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section-label">Admin Menu</div>
+            <nav class="nav-menu">
+                <a href="admin.html" class="nav-item active" data-page="admin">
+                    <i class="nav-icon fa-solid fa-map-location-dot"></i>
+                    <span>Fleet Management</span>
+                    <span class="nav-badge" id="nav-badge-total">5</span>
+                </a>
+                <a href="reports.html" class="nav-item" data-page="reports">
+                    <i class="nav-icon fa-solid fa-chart-pie"></i>
+                    <span>Laporan Armada</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showToast('Segera hadir!','info');return false;">
+                    <i class="nav-icon fa-solid fa-users"></i>
+                    <span>Manajemen Pengguna</span>
+                </a>
+                <a href="#" class="nav-item" onclick="showToast('Segera hadir!','info');return false;">
+                    <i class="nav-icon fa-solid fa-bell"></i>
+                    <span>Notifikasi</span>
+                </a>
+                <a href="settings.html" class="nav-item" data-page="settings">
+                    <i class="nav-icon fa-solid fa-gear"></i>
+                    <span>Pengaturan Sistem</span>
+                </a>
+                <div class="sidebar-section-label" style="padding-top:12px">Pengguna</div>
+                <a href="dashboard.html" class="nav-item">
+                    <i class="nav-icon fa-solid fa-gauge-high"></i>
+                    <span>Dashboard Pengguna</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user" onclick="logout()">
+                    <div class="avatar" data-user-avatar>?</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center">
+                            <span
+                                style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                                data-user-name>–</span>
+                            <span class="admin-sidebar-label">ADMIN</span>
+                        </div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.45)" data-user-email>–</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right-from-bracket"
+                        style="color:rgba(255,255,255,0.35);font-size:13px"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <div class="main-content">
+            <!-- Topbar -->
+            <header class="topbar">
+                <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
+                <div>
+                    <div class="topbar-title">Fleet Management</div>
+                    <div class="breadcrumb">Admin Panel • Real-Time Fleet Monitor</div>
+                </div>
+                <div style="flex:1"></div>
+                <button class="btn btn-primary btn-sm" onclick="refreshFleet()">
+                    <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i> Refresh
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="showToast('Ekspor data segera hadir!','info')">
+                    <i class="fa-solid fa-download"></i> Ekspor
+                </button>
+                <div class="avatar" data-user-avatar style="width:36px;height:36px;font-size:13px;cursor:pointer"
+                    onclick="logout()">?</div>
+            </header>
+
+            <main class="page-content">
+
+                <!-- ── Fleet KPI Stats ── -->
+                <div class="fleet-top-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(16,185,129,0.1);color:#10B981"><i
+                                class="fa-solid fa-car-side"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Bergerak</div>
+                            <div class="stat-value" id="kpi-moving">–</div>
+                            <div class="stat-unit">kendaraan</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(245,158,11,0.1);color:#F59E0B"><i
+                                class="fa-solid fa-pause"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Idle</div>
+                            <div class="stat-value" id="kpi-idle">–</div>
+                            <div class="stat-unit">kendaraan</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(239,68,68,0.1);color:#EF4444"><i
+                                class="fa-solid fa-gauge-high"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Overspeed</div>
+                            <div class="stat-value" id="kpi-speeding">–</div>
+                            <div class="stat-unit">kendaraan</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(148,163,184,0.1);color:#94A3B8"><i
+                                class="fa-solid fa-signal-slash"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Offline</div>
+                            <div class="stat-value" id="kpi-offline">–</div>
+                            <div class="stat-unit">kendaraan</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Fleet Map ── -->
+                <div class="card" style="margin-bottom:16px">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-title-icon" style="background:rgba(6,182,212,0.1);color:var(--accent)">
+                                <i class="fa-solid fa-map-location-dot"></i>
+                            </div>
+                            Peta Armada Real-Time
+                            <span id="fleet-count-label"
+                                style="font-size:12px;color:var(--text-muted);font-weight:500;margin-left:4px">–
+                                kendaraan</span>
+                        </div>
+                        <!-- Legend -->
+                        <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+                            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span
+                                    class="marker-dot" style="background:#10B981"></span>Bergerak</span>
+                            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span
+                                    class="marker-dot" style="background:#F59E0B"></span>Idle</span>
+                            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span
+                                    class="marker-dot" style="background:#EF4444"></span>Overspeed</span>
+                            <span style="font-size:11px;display:flex;align-items:center;gap:4px"><span
+                                    class="marker-dot" style="background:#94A3B8"></span>Offline</span>
+                        </div>
+                    </div>
+                    <div style="padding:12px">
+                        <div class="map-container" id="fleet-map" style="height:400px;"></div>
+                    </div>
+                </div>
+
+                <!-- ── Device Table ── -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-title-icon" style="background:rgba(30,58,138,0.08);color:var(--primary)">
+                                <i class="fa-solid fa-list"></i>
+                            </div>
+                            Daftar Perangkat Terhubung
+                        </div>
+                        <div
+                            style="display:flex;gap:6px;background:#F8FAFC;padding:4px;border-radius:10px;border:1px solid #E2E8F0">
+                            <button class="fleet-filter-tab active" onclick="filterTable('all', this)"
+                                id="filter-all">Semua</button>
+                            <button class="fleet-filter-tab" onclick="filterTable('moving', this)">Bergerak</button>
+                            <button class="fleet-filter-tab" onclick="filterTable('idle', this)">Idle</button>
+                            <button class="fleet-filter-tab" onclick="filterTable('speeding', this)">Overspeed</button>
+                            <button class="fleet-filter-tab" onclick="filterTable('offline', this)">Offline</button>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table class="data-table" id="fleet-table">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:130px">Device ID</th>
+                                    <th style="min-width:140px">Nama Pemilik</th>
+                                    <th style="min-width:160px">Kendaraan</th>
+                                    <th style="min-width:100px">No. Polisi</th>
+                                    <th style="min-width:100px">Status</th>
+                                    <th style="min-width:80px">Kecepatan</th>
+                                    <th style="min-width:80px">BBM</th>
+                                    <th style="min-width:130px">Terakhir Aktif</th>
+                                    <th style="min-width:100px">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fleet-table-body">
+                                <tr>
+                                    <td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted)">
+                                        <i class="fa-solid fa-spinner fa-spin"
+                                            style="font-size:20px;display:block;margin-bottom:8px"></i>
+                                        Memuat data armada...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div
+                        style="padding:14px 20px;border-top:1px solid #F1F5F9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+                        <div style="font-size:12px;color:var(--text-muted)" id="table-summary">Menampilkan – dari –
+                            kendaraan</div>
+                        <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+                            <div
+                                style="width:8px;height:8px;border-radius:50%;background:#10B981;animation:pulse-green 1.5s infinite">
+                            </div>
+                            Auto-refresh setiap 30 detik
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- Vehicle Detail Modal -->
+    <div class="modal-overlay" id="vehicle-detail-modal" style="display:none">
+        <div class="modal-box modal-box-lg">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fa-solid fa-car-side"
+                        style="color:var(--accent);margin-right:8px"></i>Detail Kendaraan</h2>
+                <button class="close-btn" onclick="closeModal('vehicle-detail-modal')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="vehicle-detail-body">
+                <!-- Populated by JS -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('vehicle-detail-modal')">Tutup</button>
+                <button class="btn btn-danger btn-sm" id="modal-revoke-btn" onclick="handleRevokeFromModal()">
+                    <i class="fa-solid fa-ban"></i> Cabut Akses
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revoke Confirm Modal -->
+    <div class="modal-overlay" id="revoke-modal" style="display:none">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 class="modal-title" style="color:#EF4444"><i class="fa-solid fa-ban"
+                        style="margin-right:8px"></i>Cabut Akses Perangkat</h2>
+                <button class="close-btn" onclick="closeModal('revoke-modal')"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert-danger" style="margin-bottom:16px">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                    <strong>Tindakan Berbahaya!</strong> Perangkat tidak akan bisa terhubung setelah akses dicabut.
+                </div>
+                <p style="font-size:14px;color:var(--text-secondary);line-height:1.7">
+                    Anda akan mencabut akses perangkat <strong id="revoke-device-id">–</strong> milik <strong
+                        id="revoke-owner">–</strong>. Pemilik tidak akan dapat memantau kendaraan mereka.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('revoke-modal')">Batal</button>
+                <button class="btn btn-danger" id="confirm-revoke-btn" onclick="confirmRevoke()">
+                    <i class="fa-solid fa-ban"></i> Ya, Cabut Akses
+                </button>
+            </div>
+    <!-- Invite Modal -->
+    <div class="modal-overlay" id="invite-modal" style="display:none">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 class="modal-title"><i class="fa-solid fa-user-plus" style="color:var(--accent);margin-right:8px"></i>Undang Pengguna</h2>
+                <button class="close-btn" onclick="closeModal('invite-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Berikan akses pantau (Viewer) kendaraan <strong id="invite-vehicle-name">-</strong> ke tim atau keluarga Anda.</p>
+                
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-primary);display:block;margin-bottom:6px">Alamat Email</label>
+                    <input type="email" id="invite-email" placeholder="contoh@email.com" style="width:100%;padding:10px 14px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif" />
+                </div>
+                
+                <div style="margin-bottom:20px;">
+                    <label style="font-size:12px;font-weight:600;color:var(--text-primary);display:block;margin-bottom:6px">Hak Akses</label>
+                    <select id="invite-role" style="width:100%;padding:10px 14px;border:1px solid #E2E8F0;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;background:white">
+                        <option value="viewer">Viewer (Hanya Melihat Data)</option>
+                        <option value="driver">Driver (Menggunakan Kendaraan)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('invite-modal')">Batal</button>
+                <button class="btn btn-primary" id="confirm-invite-btn" onclick="sendInvite()">
+                    <i class="fa-solid fa-paper-plane"></i> Kirim Undangan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // ============================================================================
+        // ADMIN FLEET MANAGEMENT PAGE LOGIC
+        // ============================================================================
+
+        let fleetMap;
+        let fleetTileLayer;
+        let fleetMarkers = {};
+        let allVehicles = [];
+        let currentFilter = 'all';
+        let pendingRevokeId = null;
+        let currentDetailVehicle = null;
+
+        const STATUS_CONFIG = {
+            moving: { color: '#10B981', label: 'Bergerak', icon: 'fa-car-side', badgeClass: 'status-online' },
+            idle: { color: '#F59E0B', label: 'Idle', icon: 'fa-pause', badgeClass: 'status-warning' },
+            speeding: { color: '#EF4444', label: 'Overspeed', icon: 'fa-gauge-high', badgeClass: 'status-danger' },
+            offline: { color: '#94A3B8', label: 'Offline', icon: 'fa-signal-slash', badgeClass: 'status-offline' },
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = requireAuth(['admin', 'user']);
+            if (!user) return;
+
+            populateUserUI();
+            initSidebar();
+
+            initFleetMap();
+            loadFleetData();
+
+            // Auto-refresh every 30 seconds
+            setInterval(loadFleetData, 30000);
+        });
+
+        function initFleetMap() {
+            fleetMap = L.map('fleet-map', {
+                center: [-6.2, 106.83],
+                zoom: 12,
+                zoomControl: false,
+            });
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const url = isDark 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+            fleetTileLayer = L.tileLayer(url, {
+                attribution: '© <a href="https://carto.com/">CartoDB</a>',
+                maxZoom: 19,
+            }).addTo(fleetMap);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(fleetMap);
+
+            document.addEventListener('themeChanged', (e) => {
+                const isD = e.detail === 'dark';
+                if (fleetTileLayer) {
+                    fleetTileLayer.setUrl(isD ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png');
+                }
+            });
+        }
+
+        function loadFleetData() {
+            fetchAllVehicles((vehicles) => {
+                allVehicles = vehicles;
+                updateKPIs(vehicles);
+                renderFleetMarkers(vehicles);
+                renderFleetTable(vehicles);
+                document.getElementById('nav-badge-total').textContent = vehicles.length;
+                document.getElementById('fleet-count-label').textContent = `${vehicles.length} kendaraan`;
+            });
+        }
+
+        function updateKPIs(vehicles) {
+            const counts = { moving: 0, idle: 0, speeding: 0, offline: 0 };
+            vehicles.forEach(v => { if (counts[v.status] !== undefined) counts[v.status]++; });
+            document.getElementById('kpi-moving').textContent = counts.moving;
+            document.getElementById('kpi-idle').textContent = counts.idle;
+            document.getElementById('kpi-speeding').textContent = counts.speeding;
+            document.getElementById('kpi-offline').textContent = counts.offline;
+        }
+
+        function renderFleetMarkers(vehicles) {
+            vehicles.forEach(v => {
+                const cfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.offline;
+                const icon = L.divIcon({
+                    className: '',
+                    html: `
+                <div style="
+                    background:${cfg.color};color:white;border-radius:50%;
+                    width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+                    font-size:14px;border:3px solid white;
+                    box-shadow:0 4px 12px ${cfg.color}66;
+                    animation:${v.status === 'speeding' ? 'pulse 1.5s infinite' : 'none'}
+                ">
+                    <i class="fa-solid ${cfg.icon}"></i>
+                </div>
+            `,
+                    iconSize: [34, 34],
+                    iconAnchor: [17, 17],
+                });
+
+                const latlng = L.latLng(v.lat, v.lng);
+                const popup = `
+            <div style="font-family:'Inter',sans-serif;min-width:200px;padding:4px 0;">
+                <div style="font-weight:800;font-size:14px;color:#0F172A;margin-bottom:2px">${v.vehicleName}</div>
+                <div style="font-size:11px;color:#64748B;margin-bottom:8px">${v.plateNumber}</div>
+                <div style="display:flex;flex-direction:column;gap:5px;font-size:12px">
+                    <div><span style="color:#94A3B8;width:80px;display:inline-block">Pemilik</span><strong>${v.ownerName}</strong></div>
+                    <div><span style="color:#94A3B8;width:80px;display:inline-block">Device ID</span><span style="font-family:monospace;font-weight:700;color:#1E3A8A">${v.deviceId}</span></div>
+                    <div><span style="color:#94A3B8;width:80px;display:inline-block">Kecepatan</span><strong>${v.speed} km/h</strong></div>
+                    <div><span style="color:#94A3B8;width:80px;display:inline-block">BBM</span><strong>${v.fuelLevel}%</strong></div>
+                    <div><span style="color:#94A3B8;width:80px;display:inline-block">Status</span>
+                        <span style="color:${cfg.color};font-weight:700">${cfg.label}</span>
+                    </div>
+                    <div><span style="color:#94A3B8;width:80px;display:inline-block">Terakhir</span>${timeAgo(v.lastSeen)}</div>
+                </div>
+                <button onclick="goToVehicleDashboard('${v.id}')" style="margin-top:12px;width:100%;padding:8px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;transition:0.2s;box-shadow:0 4px 10px rgba(12,30,74,0.2)">
+                    <i class="fa-solid fa-gauge-high" style="margin-right:6px"></i> Buka Dasbor
+                </button>
+            </div>
+        `;
+
+                if (fleetMarkers[v.id]) {
+                    fleetMarkers[v.id].setLatLng(latlng).setPopupContent(popup);
+                } else {
+                    fleetMarkers[v.id] = L.marker(latlng, { icon })
+                        .addTo(fleetMap)
+                        .bindPopup(popup);
+                }
+            });
+
+            // Fit map to all markers
+            if (Object.keys(fleetMarkers).length > 0) {
+                const group = L.featureGroup(Object.values(fleetMarkers));
+                fleetMap.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        function renderFleetTable(vehicles, filter = currentFilter) {
+            const tbody = document.getElementById('fleet-table-body');
+            const filtered = filter === 'all' ? vehicles : vehicles.filter(v => v.status === filter);
+
+            document.getElementById('table-summary').textContent = `Menampilkan ${filtered.length} dari ${vehicles.length} kendaraan`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--text-muted)">
+            <i class="fa-solid fa-inbox" style="font-size:24px;margin-bottom:8px;display:block"></i>
+            Tidak ada kendaraan dengan status "${filter}".
+        </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(v => {
+                const cfg = STATUS_CONFIG[v.status] || STATUS_CONFIG.offline;
+
+                const fuelColor = v.fuelLevel < 20 ? '#EF4444' : v.fuelLevel < 40 ? '#F59E0B' : '#10B981';
+
+                return `
+        <tr class="vehicle-row-${v.status}" id="row-${v.id}">
+            <td>
+                <span style="font-family:monospace;font-size:12px;font-weight:700;color:var(--primary);background:rgba(30,58,138,0.06);padding:3px 8px;border-radius:6px">${v.deviceId}</span>
+            </td>
+            <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0">
+                        ${getInitials(v.ownerName)}
+                    </div>
+                    <span style="font-weight:600;font-size:13px">${v.ownerName}</span>
+                </div>
+            </td>
+            <td style="font-size:13px;color:var(--text-secondary)">
+                <i class="fa-solid fa-car-side" style="color:var(--accent);margin-right:6px"></i>${v.vehicleName}
+            </td>
+            <td>
+                <span style="font-weight:700;font-size:12px;letter-spacing:0.05em;background:#F8FAFC;padding:3px 8px;border-radius:6px;border:1px solid #E2E8F0">${v.plateNumber}</span>
+            </td>
+            <td>
+                <span class="status-badge ${cfg.badgeClass}" style="font-size:10px">
+                    <div class="status-dot"></div>${cfg.label}
+                </span>
+            </td>
+            <td>
+                <span style="font-size:14px;font-weight:800;color:${v.speed > 100 ? '#EF4444' : 'var(--text-primary)'}">${v.speed}</span>
+                <span style="font-size:11px;color:var(--text-muted)"> km/h</span>
+            </td>
+            <td>
+                <div style="display:flex;align-items:center;gap:6px">
+                    <span style="font-size:13px;font-weight:700;color:${fuelColor}">${v.fuelLevel}%</span>
+                    <div style="width:40px;height:6px;background:#E2E8F0;border-radius:99px;overflow:hidden">
+                        <div style="height:100%;width:${v.fuelLevel}%;background:${fuelColor};border-radius:99px"></div>
+                    </div>
+                </div>
+            </td>
+            <td style="font-size:12px;color:var(--text-muted)">${timeAgo(v.lastSeen)}</td>
+            <td>
+                <div style="display:flex;gap:6px;align-items:center">
+                    <button class="btn btn-secondary btn-xs" onclick="showVehicleDetail('${v.id}')" title="Lihat Detail">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                    <button class="btn btn-secondary btn-xs" onclick="focusVehicle('${v.id}')" title="Fokus di Peta">
+                        <i class="fa-solid fa-crosshairs"></i>
+                    </button>
+                    <button class="btn btn-secondary btn-xs" style="color:var(--accent)" onclick="initiateInvite('${v.id}')" title="Undang Pengguna">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                    <button class="revoke-btn" id="revoke-${v.id}" onclick="initiateRevoke('${v.id}')" ${v.status === 'offline' ? 'disabled' : ''}>
+                        <i class="fa-solid fa-ban"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+            }).join('');
+        }
+
+        function filterTable(filter, btn) {
+            currentFilter = filter;
+            document.querySelectorAll('.fleet-filter-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            renderFleetTable(allVehicles, filter);
+        }
+
+        function focusVehicle(id) {
+            const marker = fleetMarkers[id];
+            if (marker && fleetMap) {
+                fleetMap.setView(marker.getLatLng(), 16, { animate: true });
+                marker.openPopup();
+                showToast('Fokus ke kendaraan di peta.', 'info');
+            }
+        }
+
+        function showVehicleDetail(id) {
+            const v = allVehicles.find(x => x.id === id);
+            if (!v) return;
+            currentDetailVehicle = v;
+
+            const cfg = STATUS_CONFIG[v.status];
+            const body = document.getElementById('vehicle-detail-body');
+            body.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;flex-wrap:wrap;">
+            <div>
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:12px">Informasi Kendaraan</div>
+                <div class="device-detail-row"><span class="key">Kendaraan</span><span class="val">${v.vehicleName}</span></div>
+                <div class="device-detail-row"><span class="key">No. Polisi</span><span class="val" style="font-family:monospace;color:var(--primary)">${v.plateNumber}</span></div>
+                <div class="device-detail-row"><span class="key">Device ID</span><span class="val" style="font-family:monospace;color:var(--primary)">${v.deviceId}</span></div>
+                <div class="device-detail-row"><span class="key">Pemilik</span><span class="val">${v.ownerName}</span></div>
+                <div style="margin-top:16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:12px">Data Real-Time</div>
+                <div class="device-detail-row"><span class="key">Status</span><span class="status-badge ${cfg.badgeClass}" style="font-size:10px"><div class="status-dot"></div>${cfg.label}</span></div>
+                <div class="device-detail-row"><span class="key">Kecepatan</span><span class="val">${v.speed} km/h</span></div>
+                <div class="device-detail-row"><span class="key">Bahan Bakar</span><span class="val">${v.fuelLevel}%</span></div>
+                <div class="device-detail-row"><span class="key">RPM Mesin</span><span class="val">${v.rpm} rpm</span></div>
+                <div class="device-detail-row"><span class="key">Suhu Mesin</span><span class="val">${v.engineTemp} &deg;C</span></div>
+                <div class="device-detail-row"><span class="key">Engine Load</span><span class="val">${v.engineLoad}%</span></div>
+                <div class="device-detail-row"><span class="key">Throttle</span><span class="val">${v.throttlePos}%</span></div>
+                <div class="device-detail-row"><span class="key">Intake Temp</span><span class="val">${v.intakeTemp} &deg;C</span></div>
+                <div class="device-detail-row"><span class="key">Voltage</span><span class="val">${v.batteryVoltage} V</span></div>
+                <div class="device-detail-row"><span class="key">Terakhir Aktif</span><span class="val">${timeAgo(v.lastSeen)}</span></div>
+                <div class="device-detail-row"><span class="key">Koordinat</span><span class="val" style="font-size:11px">${v.lat.toFixed(5)}, ${v.lng.toFixed(5)}</span></div>
+            </div>
+            <div>
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:12px">Peta Lokasi</div>
+                <div id="detail-mini-map" style="height:220px;border-radius:12px;overflow:hidden;border:1px solid #E2E8F0;"></div>
+                ${v.status === 'speeding' ? `
+                <div class="alert-danger" style="margin-top:12px">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <strong>Peringatan Overspeed!</strong> Kendaraan ini melebihi batas kecepatan (${v.speed} km/h).
+                </div>` : ''}
+            </div>
+        </div>
+    `;
+
+            openModal('vehicle-detail-modal');
+
+            // Render mini-map after modal opens
+            setTimeout(() => {
+                const miniMap = L.map('detail-mini-map', {
+                    center: [v.lat, v.lng],
+                    zoom: 15,
+                    zoomControl: false,
+                    dragging: false,
+                });
+                
+                const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                const url = isDark 
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+                
+                L.tileLayer(url, { maxZoom: 19 }).addTo(miniMap);
+                L.circleMarker([v.lat, v.lng], {
+                    radius: 10,
+                    fillColor: cfg.color,
+                    color: 'white',
+                    weight: 3,
+                    fillOpacity: 1,
+                }).addTo(miniMap);
+            }, 50);
+        }
+
+        function initiateRevoke(id) {
+            const v = allVehicles.find(x => x.id === id);
+            if (!v) return;
+            pendingRevokeId = id;
+            document.getElementById('revoke-device-id').textContent = v.deviceId;
+            document.getElementById('revoke-owner').textContent = v.ownerName;
+            openModal('revoke-modal');
+        }
+
+        function handleRevokeFromModal() {
+            if (currentDetailVehicle) {
+                initiateRevoke(currentDetailVehicle.id);
+                closeModal('vehicle-detail-modal');
+            }
+        }
+
+        async function confirmRevoke() {
+            if (!pendingRevokeId) return;
+            const btn = document.getElementById('confirm-revoke-btn');
+            setButtonLoading(btn, true);
+
+            try {
+                await revokeDeviceAccess(pendingRevokeId);
+                closeModal('revoke-modal');
+                showToast(`Akses perangkat berhasil dicabut!`, 'success');
+
+                // Update local state
+                allVehicles = allVehicles.map(v =>
+                    v.id === pendingRevokeId ? { ...v, status: 'offline', speed: 0 } : v
+                );
+                renderFleetTable(allVehicles, currentFilter);
+                updateKPIs(allVehicles);
+
+                // Remove marker from map
+                if (fleetMarkers[pendingRevokeId]) {
+                    fleetMap.removeLayer(fleetMarkers[pendingRevokeId]);
+                    delete fleetMarkers[pendingRevokeId];
+                }
+            } catch (err) {
+                showToast('Gagal mencabut akses. Coba lagi.', 'error');
+            } finally {
+                setButtonLoading(btn, false, '<i class="fa-solid fa-ban"></i> Ya, Cabut Akses');
+                pendingRevokeId = null;
+            }
+        }
+
+        function refreshFleet() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('fa-spin');
+            loadFleetData();
+            setTimeout(() => {
+                icon.classList.remove('fa-spin');
+                showToast('Data armada berhasil diperbarui!', 'success');
+            }, 800);
+        }
+
+        function initiateInvite(id) {
+            const v = allVehicles.find(x => x.id === id);
+            if (!v) return;
+            document.getElementById('invite-vehicle-name').textContent = v.vehicleName;
+            document.getElementById('invite-email').value = '';
+            openModal('invite-modal');
+        }
+
+        function sendInvite() {
+            const email = document.getElementById('invite-email').value;
+            if (!email) {
+                showToast('Harap masukkan alamat email yang valid', 'error');
+                return;
+            }
+            const btn = document.getElementById('confirm-invite-btn');
+            setButtonLoading(btn, true);
+            setTimeout(() => {
+                setButtonLoading(btn, false, '<i class="fa-solid fa-paper-plane"></i> Kirim Undangan');
+                closeModal('invite-modal');
+                showToast(`Undangan berhasil dikirim ke ${email}`, 'success');
+            }, 1000);
+        }
+
+        function goToVehicleDashboard(id) {
+            const v = allVehicles.find(x => x.id === id);
+            if (v) {
+                localStorage.setItem('car_monitor_vehicle', JSON.stringify(v));
+                window.location.href = 'dashboard.html';
+            }
+        }
+    </script>
+</body>
+
+</html>

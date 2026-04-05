@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Riwayat Perjalanan – CarMonitor IoT</title>
+    <meta name="description"
+        content="Riwayat perjalanan kendaraan: lihat semua perjalanan beserta jarak, durasi, dan skor eco-driving." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <style>
+        .trip-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid rgba(226, 232, 240, 0.7);
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: var(--shadow-card);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trip-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .trip-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--accent);
+            border-radius: 4px 0 0 4px;
+        }
+
+        .trip-card.grade-A::before {
+            background: #10B981;
+        }
+
+        .trip-card.grade-B::before {
+            background: #06B6D4;
+        }
+
+        .trip-card.grade-C::before {
+            background: #F59E0B;
+        }
+
+        .trip-card.grade-D::before {
+            background: #EF4444;
+        }
+
+        .trip-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--accent);
+        }
+
+        .trip-stat {
+            text-align: center;
+            min-width: 70px;
+        }
+
+        .trip-stat-val {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .trip-stat-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-top: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+        .filter-chip {
+            padding: 7px 16px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1.5px solid var(--border-glass);
+            background: var(--surface);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .filter-chip.active {
+            background: var(--accent);
+            color: #FFFFFF;
+            border-color: var(--accent);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+
+        .filter-chip:hover:not(.active) {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .date-divider {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            padding: 12px 0 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .date-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #E2E8F0;
+        }
+
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 640px) {
+            .kpi-strip {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast-container"></div>
+    
+    <!-- Map Modal Overlay -->
+    <div id="trip-map-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.85); z-index:9999; backdrop-filter:blur(8px); padding:24px; align-items:center; justify-content:center;">
+        <div style="background:var(--bg); border-radius:24px; width:100%; max-width:800px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--border-glass); box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div style="padding:20px 24px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-glass); background:var(--surface);">
+                <div>
+                    <h3 style="font-size:18px; font-weight:800; color:var(--text-primary); margin-bottom:4px" id="modal-trip-title">Detail Perjalanan</h3>
+                    <div style="color:var(--text-muted); font-size:13px" id="modal-trip-subtitle">Peta Rute & Rangkuman</div>
+                </div>
+                <button onclick="document.getElementById('trip-map-modal').style.display='none'" style="width:36px;height:36px;border-radius:12px;background:rgba(239,68,68,0.1);color:#EF4444;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;transition:0.2s">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div style="display:flex; flex-direction:column; flex:1; min-height:0; overflow-y:auto; overflow-x:hidden;">
+                <!-- MAP CONTAINER -->
+                <div id="trip-map-container" style="height:350px; width:100%; background:#1E293B;"></div>
+                
+                <!-- STATS -->
+                <div style="padding:24px; display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:16px; background:var(--bg);">
+                    <div class="trip-stat">
+                        <div class="trip-stat-val" id="mod-dist" style="font-size:24px">-</div>
+                        <div class="trip-stat-label">Jarak (km)</div>
+                    </div>
+                    <div class="trip-stat">
+                        <div class="trip-stat-val" id="mod-time" style="font-size:24px">-</div>
+                        <div class="trip-stat-label">Durasi</div>
+                    </div>
+                    <div class="trip-stat">
+                        <div class="trip-stat-val" id="mod-fuel" style="font-size:24px">-</div>
+                        <div class="trip-stat-label">BBM (L)</div>
+                    </div>
+                    <div class="trip-stat">
+                        <div class="trip-stat-val" id="mod-avgkml" style="font-size:24px; color:#10B981">-</div>
+                        <div class="trip-stat-label">Konsumsi (km/L)</div>
+                    </div>
+                    <div class="trip-stat">
+                        <div class="trip-stat-val" id="mod-maxspd" style="font-size:24px">-</div>
+                        <div class="trip-stat-label">Maks (km/h)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fa-solid fa-car-side"></i></div>
+                <div class="brand-text">
+                    <span class="brand-title">CarMonitor</span>
+                    <span class="brand-sub">IoT Dashboard</span>
+                </div>
+            </div>
+            <div
+                style="margin:12px;background:rgba(255,255,255,0.07);border-radius:12px;padding:10px 12px;border:1px solid rgba(255,255,255,0.1)">
+                <div
+                    style="font-size:10px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">
+                    Kendaraan Aktif</div>
+                <div style="font-size:13px;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                    id="sidebar-vehicle-name">–</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px" id="sidebar-device-id">–</div>
+            </div>
+            <div class="sidebar-section-label">Navigasi</div>
+            <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item" data-page="dashboard"><i
+                        class="nav-icon fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+                <a href="diagnostic.html" class="nav-item" data-page="diagnostic"><i
+                        class="nav-icon fa-solid fa-stethoscope"></i><span>Diagnostik OBD2</span></a>
+                <a href="history.html" class="nav-item" data-page="history"><i
+                        class="nav-icon fa-solid fa-route"></i><span>Riwayat Perjalanan</span></a>
+                <a href="reports.html" class="nav-item" data-page="reports"><i
+                        class="nav-icon fa-solid fa-chart-bar"></i><span>Laporan</span></a>
+                <a href="settings.html" class="nav-item" data-page="settings"><i
+                        class="nav-icon fa-solid fa-gear"></i><span>Pengaturan</span></a>
+                <div class="sidebar-section-label" style="padding-top:12px">Admin</div>
+                <a href="admin.html" class="nav-item"><i class="nav-icon fa-solid fa-shield-halved"></i><span>Fleet
+                        Management</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user" onclick="logout()">
+                    <div class="avatar" data-user-avatar>?</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                            data-user-name>–</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,0.45)" data-user-email>–</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right-from-bracket"
+                        style="color:rgba(255,255,255,0.35);font-size:13px"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <div class="main-content">
+            <header class="topbar">
+                <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
+                <div>
+                    <div class="topbar-title">Riwayat Perjalanan</div>
+                    <div class="breadcrumb">Semua Perjalanan • <span id="topbar-vehicle">–</span></div>
+                </div>
+                <div style="flex:1"></div>
+                <button class="btn btn-secondary btn-sm" onclick="exportTrips()">
+                    <i class="fa-solid fa-download"></i> Ekspor
+                </button>
+                <div class="avatar" data-user-avatar style="width:36px;height:36px;font-size:13px;cursor:pointer"
+                    onclick="logout()">?</div>
+            </header>
+
+            <main class="page-content">
+
+                <!-- KPI Strip -->
+                <div class="kpi-strip">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(6,182,212,0.1);color:var(--accent)"><i
+                                class="fa-solid fa-route"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Total Perjalanan</div>
+                            <div class="stat-value" id="kpi-trips">–</div>
+                            <div class="stat-unit">perjalanan</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(16,185,129,0.1);color:#10B981"><i
+                                class="fa-solid fa-road"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Total Jarak</div>
+                            <div class="stat-value" id="kpi-distance">–</div>
+                            <div class="stat-unit">km</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(245,158,11,0.1);color:#F59E0B"><i
+                                class="fa-solid fa-gas-pump"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Total BBM</div>
+                            <div class="stat-value" id="kpi-fuel">–</div>
+                            <div class="stat-unit">liter</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(139,92,246,0.1);color:#8B5CF6"><i
+                                class="fa-solid fa-leaf"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-label">Eco Score Rata</div>
+                            <div class="stat-value" id="kpi-eco">–</div>
+                            <div class="stat-unit">rata-rata grade</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="filter-bar">
+                    <span style="font-size:12px;color:var(--text-muted);font-weight:600">Filter:</span>
+                    <button class="filter-chip active" onclick="filterTrips('all', this)">Semua</button>
+                    <button class="filter-chip" onclick="filterTrips('today', this)">Hari Ini</button>
+                    <button class="filter-chip" onclick="filterTrips('yesterday', this)">Kemarin</button>
+                    <button class="filter-chip" onclick="filterTrips('week', this)">7 Hari</button>
+                    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+                        <span style="font-size:12px;color:var(--text-muted)" id="trip-count-label">Memuat...</span>
+                    </div>
+                </div>
+
+                <!-- Trip List -->
+                <div id="trip-list-container">
+                    <div style="text-align:center;padding:48px;color:var(--text-muted)" id="trips-loading">
+                        <div
+                            style="width:40px;height:40px;border:3px solid #E2E8F0;border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px">
+                        </div>
+                        Memuat riwayat perjalanan...
+                    </div>
+                    <div id="trips-list"></div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+    <script src="app.js"></script>
+    <script>
+        let allTrips = [];
+        let currentFilter = 'all';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = requireAuth(['user', 'admin']);
+            if (!user) return;
+
+            populateUserUI();
+            initSidebar();
+            setActiveNavItem();
+
+            const vehicle = AppState.currentVehicle;
+            document.getElementById('sidebar-vehicle-name').textContent = vehicle?.vehicleName || 'Kendaraan Demo';
+            document.getElementById('sidebar-device-id').textContent = vehicle?.deviceId || 'ESP32-DEMO';
+            document.getElementById('topbar-vehicle').textContent = vehicle?.plateNumber || '–';
+
+            loadTrips();
+        });
+
+        function loadTrips() {
+            const deviceId = AppState.currentVehicle?.deviceId || 'ESP32-DEMO';
+            fetchTripHistory(deviceId, (trips) => {
+                allTrips = trips;
+                document.getElementById('trips-loading').style.display = 'none';
+                updateKPIs(trips);
+                renderTrips(trips);
+            });
+        }
+
+        function updateKPIs(trips) {
+            const totalDist = trips.reduce((s, t) => s + t.distance, 0).toFixed(1);
+            const totalFuel = trips.reduce((s, t) => s + t.fuelUsed, 0).toFixed(1);
+            const grades = trips.map(t => t.ecoGrade);
+            const modeGrade = grades.sort((a, b) => grades.filter(v => v === b).length - grades.filter(v => v === a).length)[0] || '–';
+
+            document.getElementById('kpi-trips').textContent = trips.length;
+            document.getElementById('kpi-distance').textContent = totalDist;
+            document.getElementById('kpi-fuel').textContent = totalFuel;
+            document.getElementById('kpi-eco').textContent = modeGrade || '–';
+        }
+
+        function filterTrips(filter, btn) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+
+            const now = Date.now();
+            let filtered = allTrips;
+
+            if (filter === 'today') {
+                const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+                filtered = allTrips.filter(t => t.startTs >= todayStart.getTime());
+            } else if (filter === 'yesterday') {
+                const yStart = new Date(); yStart.setDate(yStart.getDate() - 1); yStart.setHours(0, 0, 0, 0);
+                const yEnd = new Date(); yEnd.setDate(yEnd.getDate() - 1); yEnd.setHours(23, 59, 59, 999);
+                filtered = allTrips.filter(t => t.startTs >= yStart.getTime() && t.startTs <= yEnd.getTime());
+            } else if (filter === 'week') {
+                filtered = allTrips.filter(t => t.startTs >= now - 7 * 86400000);
+            }
+
+            renderTrips(filtered);
+        }
+
+        function renderTrips(trips) {
+            const container = document.getElementById('trips-list');
+            document.getElementById('trip-count-label').textContent = `${trips.length} perjalanan ditemukan`;
+
+            if (trips.length === 0) {
+                container.innerHTML = `<div style="text-align:center;padding:56px;color:var(--text-muted)">
+                    <i class="fa-solid fa-route" style="font-size:40px;margin-bottom:12px;color:#CBD5E1;display:block"></i>
+                    <div style="font-size:16px;font-weight:700;color:var(--text-secondary);margin-bottom:6px">Tidak Ada Perjalanan</div>
+                    <div style="font-size:13px">Tidak ada data perjalanan untuk periode yang dipilih.</div>
+                </div>`;
+                return;
+            }
+
+            // Group by date
+            const groups = {};
+            trips.forEach(t => {
+                const d = new Date(t.startTs).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+                if (!groups[d]) groups[d] = [];
+                groups[d].push(t);
+            });
+
+            let html = '';
+            Object.entries(groups).forEach(([date, dayTrips]) => {
+                html += `<div class="date-divider">${date}</div>`;
+                dayTrips.forEach((trip, i) => {
+                    const start = new Date(trip.startTs).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    const end = new Date(trip.endTs).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    const durMs = trip.endTs - trip.startTs;
+                    const durMin = Math.floor(durMs / 60000);
+                    const durH = Math.floor(durMin / 60);
+                    const durStr = durH > 0 ? `${durH}j ${durMin % 60}m` : `${durMin}m`;
+
+                    const gradeColors = { A: '#10B981', B: '#06B6D4', C: '#F59E0B', D: '#EF4444' };
+                    const gradeColor = gradeColors[trip.ecoGrade] || '#94A3B8';
+
+                    html += `
+                    <div class="trip-card grade-${trip.ecoGrade}" style="margin-bottom:10px" onclick="showTripDetail('${trip.id}')">
+                        <div class="trip-icon">
+                            <i class="fa-solid fa-route"></i>
+                        </div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:2px">
+                                Perjalanan #${i + 1}
+                            </div>
+                            <div style="font-size:12px;color:var(--text-muted)">
+                                <i class="fa-solid fa-clock" style="margin-right:4px"></i>${start} – ${end}
+                                &nbsp;•&nbsp;
+                                <i class="fa-solid fa-hourglass-half" style="margin-right:4px"></i>${durStr}
+                            </div>
+                        </div>
+                        <div class="trip-stat">
+                            <div class="trip-stat-val">${(trip.distance || 0).toFixed(1)} km</div>
+                            <div class="trip-stat-label">Jarak</div>
+                        </div>
+                        <div class="trip-stat" style="display:none" id="stat-sep-${i}">|</div>
+                        <div class="trip-stat">
+                            <div class="trip-stat-val">${(trip.avgFuelCons_kml || 0).toFixed(1)}</div>
+                            <div class="trip-stat-label">km/L</div>
+                        </div>
+                        <div class="trip-stat">
+                            <div class="trip-stat-val" style="color:${gradeColor}">${trip.ecoGrade}</div>
+                            <div class="trip-stat-label">Eco</div>
+                        </div>
+                        <div class="trip-stat">
+                            <div class="trip-stat-val">${(trip.fuelUsed || 0).toFixed(1)}L</div>
+                            <div class="trip-stat-label">BBM</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right" style="color:var(--text-muted);font-size:13px;margin-left:4px;flex-shrink:0"></i>
+                    </div>`;
+                });
+            });
+
+            container.innerHTML = html;
+        }
+
+        let tripMap = null;
+        let routePolyline = null;
+
+        function showTripDetail(tripId) {
+            const trip = allTrips.find(t => t.id === tripId);
+            if (!trip) return;
+            
+            document.getElementById('trip-map-modal').style.display = 'flex';
+            document.getElementById('modal-trip-title').textContent = "Peta Perjalanan " + new Date(trip.startTs).toLocaleDateString('id-ID');
+            document.getElementById('modal-trip-subtitle').textContent = 
+                `${new Date(trip.startTs).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} – ${new Date(trip.endTs).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+            
+            const durMin = Math.max(1, Math.floor((trip.endTs - trip.startTs) / 60000));
+            const h = Math.floor(durMin / 60);
+            const m = durMin % 60;
+            
+            document.getElementById('mod-dist').textContent = (trip.distance || 0).toFixed(2);
+            document.getElementById('mod-time').textContent = (h > 0) ? `${h}j ${m}m` : `${m}m`;
+            document.getElementById('mod-fuel').textContent = (trip.fuelUsed || 0).toFixed(2);
+            document.getElementById('mod-avgkml').textContent = (trip.avgFuelCons_kml || 0).toFixed(1);
+            document.getElementById('mod-maxspd').textContent = Math.round(trip.maxSpeed || 0);
+            
+            showToast('Memuat rute dari satelit...', 'info');
+            
+            setTimeout(() => {
+                if(!tripMap) {
+                    tripMap = L.map('trip-map-container').setView(APP_CONFIG.defaultMapCenter, 13);
+                    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    L.tileLayer(isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(tripMap);
+                }
+                tripMap.invalidateSize();
+                
+                const deviceId = AppState.currentVehicle?.deviceId;
+                fetchTripRoute(deviceId, trip.routeId, (points) => {
+                    if (routePolyline) tripMap.removeLayer(routePolyline);
+                    
+                    if (points && points.length > 0) {
+                        const latlngs = points.map(p => [p.lat, p.lng]);
+                        routePolyline = L.polyline(latlngs, {color: '#3B82F6', weight: 5, opacity: 0.8}).addTo(tripMap);
+                        tripMap.fitBounds(routePolyline.getBounds(), {padding: [30, 30]});
+                        showToast('Rute dimuat!', 'success');
+                    } else {
+                        showToast('Detail rute satelit tidak tersedia untuk sesi perjalanan ini.', 'warning');
+                        tripMap.setView(APP_CONFIG.defaultMapCenter, 13);
+                    }
+                });
+            }, 300);
+        }
+
+        function exportTrips() {
+            showToast('Mengekspor data perjalanan... (fitur segera hadir)', 'info');
+        }
+    </script>
+</body>
+
+</html>

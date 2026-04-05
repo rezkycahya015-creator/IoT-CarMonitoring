@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CarMonitor IoT – Login</title>
+    <meta name="description"
+        content="Platform monitoring kendaraan berbasis IoT (OBD2/ESP32). Login untuk memantau kendaraan Anda secara real-time." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <!-- HTML5 QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        /* Auth page styles */
+        .auth-page {
+            display: flex;
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: var(--bg);
+            position: relative;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .feature-item .fi-icon {
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            color: #67E8F9;
+            flex-shrink: 0;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #94A3B8;
+            font-size: 14px;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .password-toggle:hover {
+            color: var(--primary);
+        }
+
+        .strength-bar {
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .strength-segment {
+            flex: 1;
+            height: 3px;
+            border-radius: 99px;
+            background: #E2E8F0;
+            transition: background 0.3s;
+        }
+
+        /* Device card picker in modal */
+        .device-step {
+            display: none;
+        }
+
+        .device-step.active {
+            display: block;
+        }
+
+        .pairing-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 3px solid;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        .pairing-step-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            background: #F8FAFC;
+            margin-bottom: 8px;
+            border: 1px solid #E2E8F0;
+        }
+
+        .pairing-step-item.done {
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #065F46;
+        }
+
+        .pairing-step-item.active-step {
+            background: rgba(6, 182, 212, 0.08);
+            border-color: rgba(6, 182, 212, 0.3);
+            color: #0E7490;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast-container"></div>
+
+    <!-- =====================================================================
+     AUTH PAGE LAYOUT
+     ===================================================================== -->
+    <div class="auth-page">
+
+        <!-- Theme Toggle (absolute top right) -->
+        <button class="btn btn-secondary" onclick="toggleTheme()" style="position:absolute; top:20px; right:20px; width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%; z-index:50;">
+            <i class="fa-solid fa-moon" id="theme-icon"></i>
+        </button>
+
+        <!-- Left panel (features) - hidden on mobile -->
+        <div class="hidden lg:flex flex-col justify-center pr-16 max-w-lg flex-1 relative z-10">
+            <div class="mb-10">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+                    <div style="width:48px;height:48px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;color:white;">
+                        <i class="fa-solid fa-car-side"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:18px;font-weight:800;color:var(--text-primary);letter-spacing:-0.02em;">CarMonitor IoT
+                        </div>
+                        <div style="font-size:12px;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;">
+                            OBD2 / ESP32 Platform</div>
+                    </div>
+                </div>
+                <h1 style="font-size:32px;font-weight:800;color:var(--text-primary);line-height:1.2;margin-bottom:12px;">
+                    Pantau Kendaraan Anda<br /><span style="color:var(--accent);">Secara Real-Time</span>
+                </h1>
+                <p style="color:var(--text-secondary);font-size:15px;line-height:1.7;">
+                    Platform monitoring kendaraan terpadu berbasis IoT dengan teknologi OBD2 dan ESP32. Data sensor
+                    langsung dari kendaraan Anda, di mana saja.
+                </p>
+            </div>
+
+            <div>
+                <div class="feature-item">
+                    <div class="fi-icon"><i class="fa-solid fa-gauge-high"></i></div>
+                    <div><strong style="color:var(--text-primary)">Live Sensor Data</strong><br />Kecepatan, RPM, Suhu, & Bahan Bakar
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="fi-icon"><i class="fa-solid fa-location-dot"></i></div>
+                    <div><strong style="color:var(--text-primary)">GPS Tracking Real-Time</strong><br />Pantau posisi kendaraan secara
+                        langsung</div>
+                </div>
+                <div class="feature-item">
+                    <div class="fi-icon"><i class="fa-solid fa-stethoscope"></i></div>
+                    <div><strong style="color:var(--text-primary)">Diagnostik OBD2</strong><br />Baca & hapus kode kerusakan (DTC)
+                    </div>
+                </div>
+                <div class="feature-item">
+                    <div class="fi-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div><strong style="color:var(--text-primary)">Geofence & Anti-Maling</strong><br />Notifikasi otomatis jika
+                        kendaraan keluar area aman</div>
+                </div>
+            </div>
+
+            <!-- Trust badges -->
+            <div style="display:flex;gap:16px;margin-top:32px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px;">
+                    <i class="fa-solid fa-lock" style="color:var(--accent)"></i> Enkripsi SSL
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px;">
+                    <i class="fa-solid fa-fire" style="color:var(--accent)"></i> Firebase Backend
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;color:var(--text-muted);font-size:12px;">
+                    <i class="fa-solid fa-bolt" style="color:var(--accent)"></i> Real-Time Stream
+                </div>
+            </div>
+        </div>
+
+        <!-- Auth Card -->
+        <div class="auth-card" style="flex-shrink:0;">
+
+            <!-- Mobile logo only -->
+            <div class="lg:hidden auth-logo mb-6">
+                <div class="auth-logo-icon">
+                    <i class="fa-solid fa-car-side"></i>
+                </div>
+                <h2 style="font-size:20px;font-weight:800;color:var(--primary);">CarMonitor IoT</h2>
+                <p style="font-size:12px;color:var(--text-muted);">Platform Monitoring Kendaraan</p>
+            </div>
+
+            <!-- Desktop title -->
+            <div class="hidden lg:block mb-6">
+                <h2 style="font-size:22px;font-weight:800;color:var(--primary);margin-bottom:4px;">Selamat Datang!</h2>
+                <p style="font-size:13px;color:var(--text-muted);">Masuk ke akun Anda untuk melanjutkan</p>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div class="auth-tabs" id="auth-tabs">
+                <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Masuk</button>
+                <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Daftar</button>
+            </div>
+
+            <!-- Social Login Buttons -->
+            <button class="social-btn" onclick="handleSocialLogin('google')">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width="18" height="18" />
+                <span>Lanjutkan dengan Google</span>
+            </button>
+            <button class="social-btn" onclick="handleSocialLogin('facebook')">
+                <i class="fa-brands fa-facebook" style="color:#1877F2;font-size:18px"></i>
+                <span>Lanjutkan dengan Facebook</span>
+            </button>
+            <button class="social-btn" onclick="startQRScanner()" style="margin-top:8px; border-color:var(--accent); background:rgba(6,182,212,0.05)">
+                <i class="fa-solid fa-qrcode" style="color:var(--accent);font-size:18px"></i>
+                <span style="color:var(--text-primary); font-weight:600;">Login Cepat via QR Code</span>
+            </button>
+
+            <div class="divider">atau</div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" onsubmit="handleLogin(event)" novalidate>
+                <div class="form-group">
+                    <label class="form-label" for="login-email">Alamat Email</label>
+                    <div class="input-icon-wrap">
+                        <i class="input-icon fa-regular fa-envelope"></i>
+                        <input type="email" id="login-email" class="form-input" placeholder="email@contoh.com"
+                            autocomplete="email" required />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <label class="form-label" for="login-password" style="margin:0">Kata Sandi</label>
+                        <a href="#"
+                            onclick="showToast('Fitur reset password akan segera hadir.', 'info'); return false;"
+                            style="font-size:12px;color:var(--accent);text-decoration:none;font-weight:600">
+                            Lupa password?
+                        </a>
+                    </div>
+                    <div class="input-icon-wrap" style="position:relative">
+                        <i class="input-icon fa-solid fa-lock"></i>
+                        <input type="password" id="login-password" class="form-input" placeholder="Masukkan kata sandi"
+                            autocomplete="current-password" style="padding-right:40px" required />
+                        <button type="button" class="password-toggle" onclick="togglePassword('login-password', this)">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+                    <input type="checkbox" id="remember-me"
+                        style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer" />
+                    <label for="remember-me" style="font-size:13px;color:var(--text-secondary);cursor:pointer">Ingat
+                        saya</label>
+                </div>
+
+                <button type="submit" id="login-btn" class="btn btn-primary btn-full btn-lg">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    Masuk
+                </button>
+
+                <!-- Demo quick access  -->
+                <div style="margin-top:12px;display:flex;gap:8px;">
+                    <button type="button" class="btn btn-secondary" style="flex:1;font-size:12px;padding:8px"
+                        onclick="quickLogin('user')">
+                        <i class="fa-regular fa-user"></i> Demo User
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="flex:1;font-size:12px;padding:8px"
+                        onclick="quickLogin('admin')">
+                        <i class="fa-solid fa-user-shield"></i> Demo Admin
+                    </button>
+                </div>
+            </form>
+
+            <!-- REGISTER FORM (hidden initially) -->
+            <form id="register-form" onsubmit="handleRegister(event)" novalidate style="display:none">
+                <div class="form-group">
+                    <label class="form-label" for="reg-name">Nama Lengkap</label>
+                    <div class="input-icon-wrap">
+                        <i class="input-icon fa-regular fa-user"></i>
+                        <input type="text" id="reg-name" class="form-input" placeholder="Nama Anda" autocomplete="name"
+                            required />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="reg-email">Alamat Email</label>
+                    <div class="input-icon-wrap">
+                        <i class="input-icon fa-regular fa-envelope"></i>
+                        <input type="email" id="reg-email" class="form-input" placeholder="email@contoh.com"
+                            autocomplete="email" required />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="reg-password">Kata Sandi</label>
+                    <div class="input-icon-wrap" style="position:relative">
+                        <i class="input-icon fa-solid fa-lock"></i>
+                        <input type="password" id="reg-password" class="form-input" placeholder="Min. 6 karakter"
+                            style="padding-right:40px" autocomplete="new-password"
+                            oninput="updatePasswordStrength(this.value)" required />
+                        <button type="button" class="password-toggle" onclick="togglePassword('reg-password', this)">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                    <!-- Password strength -->
+                    <div class="strength-bar" id="strength-bar">
+                        <div class="strength-segment" id="s1"></div>
+                        <div class="strength-segment" id="s2"></div>
+                        <div class="strength-segment" id="s3"></div>
+                        <div class="strength-segment" id="s4"></div>
+                    </div>
+                    <div id="strength-label" style="font-size:11px;color:var(--text-muted);margin-top:4px;"></div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="reg-confirm">Konfirmasi Kata Sandi</label>
+                    <div class="input-icon-wrap">
+                        <i class="input-icon fa-solid fa-lock"></i>
+                        <input type="password" id="reg-confirm" class="form-input" placeholder="Ulangi kata sandi"
+                            autocomplete="new-password" required />
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="reg-role">Peran / Status Pengguna</label>
+                    <div class="input-icon-wrap" style="position:relative">
+                        <i class="input-icon fa-solid fa-user-tag"></i>
+                        <select id="reg-role" class="form-input" style="padding-left:42px; appearance:none; background-color:var(--bg)" required>
+                            <option value="" disabled selected>Pilih peran Anda</option>
+                            <option value="personal">Penggunaan Pribadi</option>
+                            <option value="driver">Driver (Sopir)</option>
+                            <option value="owner">Pemilik Kendaraan</option>
+                            <option value="company_manager">Pengelola Perusahaan</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none; font-size:12px;"></i>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:20px;">
+                    <input type="checkbox" id="agree-terms"
+                        style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer;margin-top:2px;flex-shrink:0"
+                        required />
+                    <label for="agree-terms"
+                        style="font-size:12px;color:var(--text-secondary);cursor:pointer;line-height:1.5">
+                        Saya menyetujui <a href="#" style="color:var(--accent);text-decoration:none">Syarat &
+                            Ketentuan</a> serta <a href="#" style="color:var(--accent);text-decoration:none">Kebijakan
+                            Privasi</a>
+                    </label>
+                </div>
+
+                <button type="submit" id="register-btn" class="btn btn-primary btn-full btn-lg">
+                    <i class="fa-solid fa-user-plus"></i>
+                    Buat Akun
+                </button>
+            </form>
+
+            <!-- Footer note -->
+            <p style="text-align:center;font-size:11px;color:var(--text-muted);margin-top:20px;">
+                <i class="fa-solid fa-shield-halved" style="margin-right:4px;color:var(--accent)"></i>
+                Dilindungi Firebase Authentication & SSL Encryption
+            </p>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+     DEVICE PAIRING MODAL
+     ========================================================================== -->
+    <div class="modal-overlay" id="pairing-modal" style="display:none;">
+        <div class="modal-box">
+            <!-- Modal Header -->
+            <div class="modal-header" style="background:linear-gradient(135deg,var(--primary),#1E40AF);padding:24px;">
+                <div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                        <div
+                            style="width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:white;">
+                            <i class="fa-solid fa-link"></i>
+                        </div>
+                        <h2 style="font-size:16px;font-weight:700;color:white;">Tambah Kendaraan</h2>
+                    </div>
+                    <p style="font-size:12px;color:rgba(255,255,255,0.65);">Hubungkan perangkat ESP32 OBD2 Anda</p>
+                </div>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Step indicators -->
+                <div style="display:flex;gap:0;margin-bottom:24px;">
+                    <div class="pairing-step-item flex-1 done" id="step-ind-1"
+                        style="border-radius:10px 0 0 10px;margin-bottom:0;border-right:none;">
+                        <i class="fa-solid fa-circle-check" style="color:#10B981"></i>
+                        <span>Login</span>
+                    </div>
+                    <div class="pairing-step-item flex-1 active-step" id="step-ind-2"
+                        style="border-radius:0;margin-bottom:0;border-right:none;">
+                        <i class="fa-solid fa-link" style="color:#06B6D4"></i>
+                        <span>Pasangkan</span>
+                    </div>
+                    <div class="pairing-step-item flex-1" id="step-ind-3"
+                        style="border-radius:0 10px 10px 0;margin-bottom:0;">
+                        <i class="fa-regular fa-circle-check"></i>
+                        <span>Selesai</span>
+                    </div>
+                </div>
+
+                <!-- STEP 1: Enter Device Info -->
+                <div class="device-step active" id="device-step-1">
+                    <div style="text-align:center;margin-bottom:20px;">
+                        <div
+                            style="width:64px;height:64px;background:linear-gradient(135deg,rgba(30,58,138,0.08),rgba(6,182,212,0.12));border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px;border:2px dashed rgba(6,182,212,0.4);">
+                            <i class="fa-solid fa-microchip" style="color:var(--accent)"></i>
+                        </div>
+                        <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
+                            Masukkan ID Perangkat dan PIN yang tertera pada stiker di perangkat ESP32 OBD2 Anda.
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ID Perangkat (Device ID)</label>
+                        <div class="input-icon-wrap">
+                            <i class="input-icon fa-solid fa-microchip"></i>
+                            <input type="text" id="device-id" class="form-input" placeholder="Contoh: ESP32-A1B2C3"
+                                style="font-family:monospace;letter-spacing:0.05em;font-weight:600" maxlength="20" />
+                        </div>
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Format: ESP32-XXXXXX
+                            (tertera pada perangkat)</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">PIN Pairing (6 digit)</label>
+                        <div class="input-icon-wrap" style="position:relative">
+                            <i class="input-icon fa-solid fa-key"></i>
+                            <input type="password" id="device-pin" class="form-input" placeholder="● ● ● ● ● ●"
+                                maxlength="6" style="letter-spacing:0.2em;padding-right:40px" inputmode="numeric"
+                                pattern="[0-9]*" />
+                            <button type="button" class="password-toggle" onclick="togglePassword('device-pin',this)">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nama Kendaraan / Alias</label>
+                        <div class="input-icon-wrap">
+                            <i class="input-icon fa-solid fa-car"></i>
+                            <input type="text" id="vehicle-name" class="form-input"
+                                placeholder="Contoh: Toyota Avanza - Pribadi" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nomor Polisi</label>
+                        <div class="input-icon-wrap">
+                            <i class="input-icon fa-solid fa-id-card"></i>
+                            <input type="text" id="vehicle-plate" class="form-input" placeholder="Contoh: B 1234 ABC"
+                                style="text-transform:uppercase" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Connecting Animation -->
+                <div class="device-step" id="device-step-2">
+                    <div style="text-align:center;padding:20px 0;">
+                        <div
+                            style="width:80px;height:80px;border-radius:50%;border:4px solid #E2E8F0;border-top-color:var(--accent);animation:spin 1s linear infinite;margin:0 auto 20px;">
+                        </div>
+                        <h3 style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">
+                            Menghubungkan...</h3>
+                        <p id="pairing-status-msg" style="font-size:13px;color:var(--text-muted);">Memverifikasi ID
+                            Perangkat & PIN...</p>
+                    </div>
+                    <div style="padding:0 8px;">
+                        <div class="alert-info" style="margin-bottom:0">
+                            <i class="fa-solid fa-circle-info"></i>
+                            Pastikan perangkat ESP32 OBD2 sudah terpasang pada port OBD2 kendaraan dan terhubung ke
+                            jaringan WiFi/4G.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Success -->
+                <div class="device-step" id="device-step-3">
+                    <div style="text-align:center;padding:20px 0;">
+                        <div
+                            style="width:80px;height:80px;background:rgba(16,185,129,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 16px;color:var(--status-green);border:3px solid rgba(16,185,129,0.3);">
+                            <i class="fa-solid fa-circle-check"></i>
+                        </div>
+                        <h3 style="font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">
+                            Terhubung!</h3>
+                        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Kendaraan Anda berhasil
+                            ditambahkan ke sistem monitoring.</p>
+
+                        <div
+                            style="background:#F8FAFC;border-radius:12px;padding:16px;text-align:left;border:1px solid #E2E8F0;">
+                            <div style="display:flex;gap:10px;margin-bottom:8px;">
+                                <span style="font-size:12px;color:var(--text-muted);width:110px;flex-shrink:0">Device
+                                    ID</span>
+                                <span id="confirm-device-id"
+                                    style="font-size:12px;font-weight:700;color:var(--primary);font-family:monospace"></span>
+                            </div>
+                            <div style="display:flex;gap:10px;margin-bottom:8px;">
+                                <span
+                                    style="font-size:12px;color:var(--text-muted);width:110px;flex-shrink:0">Kendaraan</span>
+                                <span id="confirm-vehicle-name"
+                                    style="font-size:12px;font-weight:600;color:var(--text-primary)"></span>
+                            </div>
+                            <div style="display:flex;gap:10px;">
+                                <span style="font-size:12px;color:var(--text-muted);width:110px;flex-shrink:0">Nomor
+                                    Polisi</span>
+                                <span id="confirm-plate"
+                                    style="font-size:12px;font-weight:700;color:var(--text-primary);letter-spacing:0.05em;"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" id="pairing-footer">
+                <button class="btn btn-secondary" onclick="skipPairing()">Lewati</button>
+                <button class="btn btn-primary" id="pairing-next-btn" onclick="handlePairingNext()">
+                    <i class="fa-solid fa-link"></i>
+                    Hubungkan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================================================
+     QR LOGIN MODAL
+     ========================================================================== -->
+    <div class="modal-overlay" id="qr-login-modal" style="display:none;">
+        <div class="modal-box" style="text-align:center;max-width:400px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,var(--primary),#1E40AF);padding:24px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;justify-content:center;">
+                    <i class="fa-solid fa-qrcode" style="font-size:24px;color:white;"></i>
+                    <h2 style="font-size:18px;font-weight:700;color:white;">Scan QR Perangkat</h2>
+                </div>
+                <p style="font-size:12px;color:rgba(255,255,255,0.75);">Arahkan kamera ke kode QR di ESP32 Anda</p>
+            </div>
+            <div class="modal-body" style="padding:20px;background:#F8FAFC;">
+                <div id="qr-reader" style="width:100%; border-radius:12px; overflow:hidden; border:2px dashed #CBD5E1;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-full" onclick="stopQRScanner()">Tutup & Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+    <script src="app.js"></script>
+    <script>
+        // =========================================================================
+        // AUTH PAGE LOGIC
+        // =========================================================================
+
+        let currentTab = 'login';
+        let pairingStep = 1;
+        let loggedInUser = null;
+
+        // If already logged in, redirect
+        window.addEventListener('DOMContentLoaded', () => {
+            const user = loadSession();
+            if (user) {
+                redirectAfterLogin(user);
+            }
+        });
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+            document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+            document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+            document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+        }
+
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-regular fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-regular fa-eye';
+            }
+        }
+
+        function updatePasswordStrength(val) {
+            const segments = [
+                document.getElementById('s1'),
+                document.getElementById('s2'),
+                document.getElementById('s3'),
+                document.getElementById('s4'),
+            ];
+            const label = document.getElementById('strength-label');
+            let strength = 0;
+            if (val.length >= 6) strength++;
+            if (val.length >= 10) strength++;
+            if (/[A-Z]/.test(val) || /\d/.test(val)) strength++;
+            if (/[^A-Za-z0-9]/.test(val)) strength++;
+
+            const colors = ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'];
+            const labels = ['Lemah', 'Cukup', 'Kuat', 'Sangat Kuat'];
+            segments.forEach((s, i) => {
+                s.style.background = i < strength ? colors[strength - 1] : '#E2E8F0';
+            });
+            label.textContent = val.length > 0 ? labels[Math.max(0, strength - 1)] : '';
+            label.style.color = strength > 0 ? colors[strength - 1] : '#94A3B8';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-btn');
+
+            if (!email || !password) {
+                showToast('Harap isi email dan kata sandi.', 'warning');
+                return;
+            }
+
+            setButtonLoading(btn, true);
+
+            const { user, error } = await loginWithEmail(email, password);
+
+            setButtonLoading(btn, false, '<i class="fa-solid fa-right-to-bracket"></i> Masuk');
+
+            if (error) {
+                showToast(error, 'error');
+                return;
+            }
+
+            loggedInUser = user;
+            showToast(`Selamat datang, ${user.displayName}! 🎉`, 'success', 2000);
+            setTimeout(() => {
+                saveSession(user);
+                // Show pairing modal for first-time users (or if no vehicle saved)
+                const vehicle = JSON.parse(localStorage.getItem('car_monitor_vehicle'));
+                if (!vehicle) {
+                    openModal('pairing-modal');
+                } else {
+                    redirectAfterLogin(user);
+                }
+            }, 800);
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value.trim();
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-password').value;
+            const confirm = document.getElementById('reg-confirm').value;
+            const role = document.getElementById('reg-role').value;
+            const agreed = document.getElementById('agree-terms').checked;
+            const btn = document.getElementById('register-btn');
+
+            if (!name || !email || !password || !role) {
+                showToast('Harap lengkapi semua field termashuk Peran Anda.', 'warning');
+                return;
+            }
+            if (password !== confirm) {
+                showToast('Konfirmasi password tidak cocok.', 'error');
+                return;
+            }
+            if (!agreed) {
+                showToast('Anda harus menyetujui syarat & ketentuan.', 'warning');
+                return;
+            }
+
+            setButtonLoading(btn, true);
+            const { user, error } = await registerWithEmail(email, password, name, role);
+            setButtonLoading(btn, false, '<i class="fa-solid fa-user-plus"></i> Buat Akun');
+
+            if (error) {
+                showToast(error, 'error');
+                return;
+            }
+
+            loggedInUser = user;
+            showToast(`Akun berhasil dibuat! Selamat bergabung, ${name}! 🎉`, 'success', 2500);
+            setTimeout(() => {
+                saveSession(user);
+                openModal('pairing-modal');
+            }, 1000);
+        }
+
+
+        async function quickLogin(role) {
+            const email = role === 'admin' ? 'admin@demo.com' : 'user@demo.com';
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').value = 'demo123';
+
+            // Auto fill vehicle for demo user login
+            if (role === 'admin') {
+                const demoVehicles = [
+                    { deviceId: 'ESP32-A1B2C3', vehicleName: 'Toyota Avanza 2021', plateNumber: 'B 1234 ABC' },
+                    { deviceId: 'ESP32-X8Y9Z0', vehicleName: 'Daihatsu Xenia 2022', plateNumber: 'B 5678 DEF' },
+                    { deviceId: 'ESP32-TRUCK1', vehicleName: 'Hino Dutro', plateNumber: 'B 9012 GHI' }
+                ];
+                localStorage.setItem('car_monitor_vehicles', JSON.stringify(demoVehicles));
+                localStorage.setItem('car_monitor_vehicle', JSON.stringify(demoVehicles[0]));
+            } else {
+                const demoVehicle = {
+                    deviceId: 'ESP32-A1B2C3',
+                    vehicleName: 'Toyota Avanza 2021',
+                    plateNumber: 'B 1234 ABC',
+                };
+                localStorage.setItem('car_monitor_vehicles', JSON.stringify([demoVehicle]));
+                localStorage.setItem('car_monitor_vehicle', JSON.stringify(demoVehicle));
+            }
+
+            document.getElementById('login-form').dispatchEvent(new Event('submit'));
+        }
+
+        function redirectAfterLogin(user) {
+            if (user.role === 'admin') {
+                window.location.href = 'admin.html';
+            } else {
+                window.location.href = 'dashboard.html';
+            }
+        }
+
+        // =========================================================================
+        // DEVICE PAIRING MODAL LOGIC
+        // =========================================================================
+
+        function handlePairingNext() {
+            if (pairingStep === 1) {
+                const deviceId = document.getElementById('device-id').value.trim();
+                const pin = document.getElementById('device-pin').value.trim();
+                const vname = document.getElementById('vehicle-name').value.trim();
+                const plate = document.getElementById('vehicle-plate').value.trim();
+
+                if (!deviceId || deviceId.length < 6) {
+                    showToast('Masukkan ID Perangkat yang valid.', 'warning');
+                    return;
+                }
+                if (!pin || pin.length < 4) {
+                    showToast('Masukkan PIN yang valid (min. 4 digit).', 'warning');
+                    return;
+                }
+
+                movePairingStep(2);
+                simulatePairing(deviceId, vname, plate);
+
+            } else if (pairingStep === 3) {
+                closeModal('pairing-modal');
+                redirectAfterLogin(loggedInUser || AppState.currentUser);
+            }
+        }
+
+        function skipPairing() {
+            closeModal('pairing-modal');
+            redirectAfterLogin(loggedInUser || AppState.currentUser);
+        }
+
+        function simulatePairing(deviceId, vname, plate) {
+            setTimeout(() => {
+                const vehicle = {
+                    deviceId: deviceId,
+                    vehicleName: vname || 'Kendaraan Baru',
+                    plateNumber: plate || 'Belum diatur'
+                };
+                localStorage.setItem('car_monitor_vehicle', JSON.stringify(vehicle));
+                
+                document.getElementById('confirm-device-id').textContent = deviceId;
+                document.getElementById('confirm-vehicle-name').textContent = vehicle.vehicleName;
+                document.getElementById('confirm-plate').textContent = vehicle.plateNumber;
+                
+                movePairingStep(3);
+            }, 2000); // simulate 2 sec load
+        }
+
+        // =========================================================================
+        // QR SCANNER LOGIC
+        // =========================================================================
+        let html5QrcodeScanner;
+
+        function startQRScanner() {
+            openModal('qr-login-modal');
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "qr-reader",
+                { fps: 10, qrbox: {width: 250, height: 250} },
+                /* verbose= */ false);
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function stopQRScanner() {
+            if (html5QrcodeScanner) {
+                try {
+                    html5QrcodeScanner.clear();
+                } catch(e) {}
+            }
+            closeModal('qr-login-modal');
+        }
+
+        async function onScanSuccess(decodedText, decodedResult) {
+            stopQRScanner();
+            showToast('QR Code terdeteksi: ' + decodedText, 'success');
+            
+            // Assume the QR code contains the Device ID, e.g. "ESP32-A1B2C3"
+            const deviceId = decodedText.trim();
+            const guestUser = {
+                uid: 'guest-' + Date.now(),
+                email: 'tamu@carmonitor.local',
+                displayName: 'Pengguna QR (' + deviceId.slice(-4) + ')',
+                role: 'personal'
+            };
+            const scannedVehicle = {
+                deviceId: deviceId,
+                vehicleName: 'Mobil ' + deviceId.slice(-4),
+                plateNumber: '-',
+            };
+            
+            saveSession(guestUser, scannedVehicle);
+            setTimeout(() => {
+                redirectAfterLogin(guestUser);
+            }, 800);
+        }
+
+        function onScanFailure(error) {
+            // IGNORE
+        }
+    </script>
+</body>
+
+</html>
