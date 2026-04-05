@@ -163,8 +163,8 @@ void loop() {
 
     // Cek batas interval Diagnostic Mode override 
     String diagPath = "Devices/" + deviceID + "/Config/UpdateOverrideUntil";
-    if (Firebase.RTDB.getInt(&fbdo, diagPath.c_str())) {
-        unsigned long netEpochOverride = (unsigned long)(fbdo.intData() / 1000); 
+    if (Firebase.RTDB.getDouble(&fbdo, diagPath.c_str())) {
+        unsigned long netEpochOverride = (unsigned long)(fbdo.doubleData() / 1000.0); 
         g_diagnosticUntil = netEpochOverride;
     }
 
@@ -276,6 +276,7 @@ void loop() {
             gpsJson.set("lat", lat);
             gpsJson.set("lng", lng);
             gpsJson.set("speed", speed);
+            gpsJson.set("Timestamp", (double)currentEpoch * 1000.0);
             
             String gpsPath = "Devices/" + deviceID + "/GPS";
             Firebase.RTDB.updateNode(&fbdo, gpsPath.c_str(), &gpsJson);

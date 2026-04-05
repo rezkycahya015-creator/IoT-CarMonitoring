@@ -850,6 +850,7 @@
         let speedReadings = [];
         let currentSettings = null;
         let lastSensorTimestamp = 0;
+        let lastGPSTimestamp = 0;
         let appLastCalcTime = Date.now();
 
         // ---- INIT ----
@@ -1058,6 +1059,8 @@
         // ---- GPS UPDATE CALLBACK ----
         function onGPSUpdate(data) {
             if (!data) return;
+            
+            lastGPSTimestamp = Date.now();
 
             const { lat, lng } = data;
 
@@ -1189,9 +1192,13 @@
             const connText = document.getElementById('connection-text');
             const connBadge = document.getElementById('connection-badge');
             const headerConn = document.getElementById('connection-status');
+            const engineStatusText = document.getElementById('engine-status-text');
+            const engineBadge = document.getElementById('engine-badge');
+            const gpsBadge = document.getElementById('gps-status');
             
             // Online if data received within last 60 seconds
             const isOnline = lastSensorTimestamp > 0 && (Date.now() - lastSensorTimestamp) < 60000;
+            const isGpsOnline = lastGPSTimestamp > 0 && (Date.now() - lastGPSTimestamp) < 60000;
             
             if (isOnline) {
                 if (connText) connText.textContent = 'Online';
@@ -1212,6 +1219,40 @@
                 if (headerConn) {
                     headerConn.className = 'status-badge status-danger';
                     headerConn.innerHTML = 'Offline';
+                }
+                
+                // Mesin Offline State
+                if (engineStatusText) engineStatusText.textContent = 'Tidak Diketahui';
+                if (engineBadge) {
+                    engineBadge.className = 'status-badge status-danger';
+                    engineBadge.innerHTML = 'OFFLINE';
+                }
+
+                // Reset Sensor Data to 0 (except Fuel)
+                if(document.getElementById('val-speed')) document.getElementById('val-speed').textContent = '0';
+                if(document.getElementById('val-rpm')) document.getElementById('val-rpm').textContent = '0';
+                if(document.getElementById('val-temp')) document.getElementById('val-temp').textContent = '0';
+                if(document.getElementById('obd-engine-load')) document.getElementById('obd-engine-load').textContent = '0 %';
+                if(document.getElementById('obd-intake-temp')) document.getElementById('obd-intake-temp').textContent = '0 °C';
+                if(document.getElementById('obd-throttle')) document.getElementById('obd-throttle').textContent = '0 %';
+                if(document.getElementById('obd-maf')) document.getElementById('obd-maf').textContent = '0 g/s';
+                if(document.getElementById('val-voltage')) document.getElementById('val-voltage').textContent = '0.0 V';
+                if(document.getElementById('val-inst-fuel')) document.getElementById('val-inst-fuel').textContent = '0.00';
+
+                // Reset gauges
+                if(typeof gaugeSpeed !== 'undefined' && gaugeSpeed) updateGaugeChart(gaugeSpeed, 0, 140);
+                if(typeof gaugeRpm !== 'undefined' && gaugeRpm) updateGaugeChart(gaugeRpm, 0, 6000);
+                if(typeof gaugeTemp !== 'undefined' && gaugeTemp) updateGaugeChart(gaugeTemp, 0, 140);
+            }
+            
+            // Update GPS Badge
+            if (gpsBadge) {
+                if (isGpsOnline) {
+                    gpsBadge.className = 'status-badge status-online';
+                    gpsBadge.innerHTML = '<div class="status-dot"></div>GPS Aktif';
+                } else {
+                    gpsBadge.className = 'status-badge status-danger';
+                    gpsBadge.innerHTML = 'GPS Mati';
                 }
             }
         }
