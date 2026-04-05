@@ -221,8 +221,8 @@
             <header class="topbar">
                 <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
                 <div>
-                    <div class="topbar-title">Diagnostik OBD2</div>
-                    <div class="breadcrumb">Scanner Kendaraan • <span id="topbar-vehicle">–</span></div>
+                    <div class="topbar-title" style="font-size:16px;">Diagnostik OBD2</div>
+                    <div class="breadcrumb" style="white-space:nowrap;"><span id="topbar-vehicle" style="font-weight:700;color:var(--text-primary);">–</span></div>
                 </div>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary btn-sm" id="scan-btn" onclick="runFullScan()">
@@ -235,7 +235,7 @@
             <main class="page-content">
 
                 <!-- ── TOP ROW: Health Score + Clear DTC ── -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 
                     <!-- Vehicle Health Score -->
                     <div class="card">
@@ -362,7 +362,7 @@
                 </div>
 
                 <!-- ── BOTTOM ROW: Freeze Frame + Readiness ── -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                     <!-- Freeze Frame Data -->
                     <div class="card">

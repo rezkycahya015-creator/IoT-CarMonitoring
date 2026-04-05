@@ -525,6 +525,10 @@ function initSidebar() {
         overlay.classList.remove('open');
     });
 
+    // Mobile sidebar overlay close works by clicking outside
+    // No explicit "X" button needed per user request
+
+
     // Conditional Fleet Management Visibility
     const fleetMenu = document.querySelector('a[href="admin.html"]');
     if (fleetMenu) {

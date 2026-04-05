@@ -223,8 +223,8 @@
                     <i class="fa-solid fa-bars"></i>
                 </button>
                 <div>
-                    <div class="topbar-title">Dashboard Kendaraan</div>
-                    <div class="breadcrumb">Real-time Monitoring • <span id="topbar-vehicle">–</span></div>
+                    <div class="topbar-title" style="font-size:16px;">Kendaraan</div>
+                    <div class="breadcrumb" style="white-space:nowrap;"><span id="topbar-vehicle" style="font-weight:700;color:var(--text-primary);">–</span></div>
                 </div>
                 <div style="flex:1"></div>
 
@@ -918,7 +918,7 @@
         function onSensorUpdate(data) {
             if (!data) return;
 
-            const { speed, rpm, engineTemp, fuelLevel, engineLoad, intakeTemp, throttlePos, batteryVoltage, maf, distanceTravelled, fuelUsed, avgFuelUse, instFuelRate, engineOn, timestamp } = data;
+            const { speed, rpm, engineTemp, fuelLevel, engineLoad, intakeTemp, throttlePos, batteryVoltage, maf, distanceTravelled, fuelUsed, avgFuelUse, avgKml, instFuelRate, engineOn, timestamp } = data;
 
             lastSensorTimestamp = timestamp || Date.now();
 

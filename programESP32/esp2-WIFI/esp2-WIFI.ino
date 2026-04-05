@@ -130,8 +130,8 @@ void endOfTripPush() {
     }
 
     FirebaseJson tripData;
-    tripData.set("startTs", (uint32_t)(g_tripStartEpoch * 1000ULL));
-    tripData.set("endTs", (uint32_t)(endEpoch * 1000ULL));
+    tripData.set("startTs", (double)g_tripStartEpoch * 1000.0);
+    tripData.set("endTs", (double)endEpoch * 1000.0);
     tripData.set("distance", g_tripDistance);
     tripData.set("fuelUsed", g_tripFuelUsed);
     tripData.set("maxSpeed", g_maxSpeedInTrip);
@@ -259,7 +259,7 @@ void loop() {
             liveJson.set("FuelLevel", fuel);
             liveJson.set("FuelADC", fuelADC);
             liveJson.set("EngineOn", engineOn);
-            liveJson.set("Timestamp", (uint32_t)(currentEpoch * 1000ULL));
+            liveJson.set("Timestamp", (double)currentEpoch * 1000.0);
             
             liveJson.set("DistanceTravelled", g_tripDistance);
             liveJson.set("FuelUsed", g_tripFuelUsed);

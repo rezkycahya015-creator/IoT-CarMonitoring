@@ -1357,7 +1357,37 @@ body {
    RESPONSIVE - Mobile
    ========================================================================== */
 
+.sidebar-close-btn {
+    display: none;
+}
+
 @media (max-width: 768px) {
+    .sidebar-close-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: var(--bg);
+        color: var(--text-muted);
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        transition: var(--transition);
+        border: 1px solid var(--border-glass);
+    }
+
+    .sidebar-close-btn:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: var(--status-red);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+
     .hamburger-btn {
         display: flex;
     }
@@ -1367,6 +1397,10 @@ body {
         left: -100%;
         top: 0;
         height: 100vh;
+        width: 280px;
+        max-width: 85vw;
+        border-radius: 0 24px 24px 0;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.15);
         z-index: 1501;
     }
 
@@ -1406,10 +1440,6 @@ body {
 }
 
 @media (max-width: 480px) {
-    :root {
-        --sidebar-width: 100vw;
-    }
-
     .page-content {
         padding: 12px;
     }
