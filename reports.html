@@ -126,53 +126,61 @@
 </head>
 
 <body>
-    <div id="toast-container"></div>
+   <div id="toast-container"></div>
+
+    <!-- ==========================================================================
+     APP CONTAINER
+     ========================================================================== -->
     <div class="app-container">
+
+        <!-- Sidebar Overlay (mobile) -->
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+        <!-- ======================================================================
+         SIDEBAR
+         ====================================================================== -->
         <aside class="sidebar" id="sidebar">
+            <!-- Brand -->
             <div class="sidebar-brand">
                 <div class="brand-icon"><i class="fa-solid fa-car-side"></i></div>
-                <div class="brand-text"><span class="brand-title">CarMonitor</span><span class="brand-sub">IoT
-                        Dashboard</span></div>
-            </div>
-            <div
-                style="margin:12px;background:rgba(255,255,255,0.07);border-radius:12px;padding:10px 12px;border:1px solid rgba(255,255,255,0.1)">
-                <div
-                    style="font-size:10px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">
-                    Kendaraan Aktif</div>
-                <div style="font-size:13px;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-                    id="sidebar-vehicle-name">–</div>
-                <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px" id="sidebar-device-id">–</div>
-            </div>
-            <div class="sidebar-section-label">Navigasi</div>
-            <nav class="nav-menu">
-                <a href="dashboard.html" class="nav-item" data-page="dashboard"><i
-                        class="nav-icon fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
-                <a href="diagnostic.html" class="nav-item" data-page="diagnostic"><i
-                        class="nav-icon fa-solid fa-stethoscope"></i><span>Diagnostik OBD2</span></a>
-                <a href="history.html" class="nav-item" data-page="history"><i
-                        class="nav-icon fa-solid fa-route"></i><span>Riwayat Perjalanan</span></a>
-                <a href="reports.html" class="nav-item" data-page="reports"><i
-                        class="nav-icon fa-solid fa-chart-bar"></i><span>Laporan</span></a>
-                <a href="settings.html" class="nav-item" data-page="settings"><i
-                        class="nav-icon fa-solid fa-gear"></i><span>Pengaturan</span></a>
-                <div class="sidebar-section-label" style="padding-top:12px">Admin</div>
-                <a href="admin.html" class="nav-item"><i class="nav-icon fa-solid fa-shield-halved"></i><span>Fleet
-                        Management</span></a>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="sidebar-user" onclick="logout()">
-                    <div class="avatar" data-user-avatar>?</div>
-                    <div style="flex:1;min-width:0">
-                        <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-                            data-user-name>–</div>
-                        <div style="font-size:11px;color:rgba(255,255,255,0.45)" data-user-email>–</div>
-                    </div>
-                    <i class="fa-solid fa-arrow-right-from-bracket"
-                        style="color:rgba(255,255,255,0.35);font-size:13px"></i>
+                <div class="brand-text">
+                    <span class="brand-title">CarMonitor</span>
+                    <span class="brand-sub">IoT Dashboard</span>
                 </div>
             </div>
+
+            <!-- Vehicle info chip -->
+            <div class="sidebar-vehicle-chip">
+                <div class="sidebar-vehicle-chip-label">Kendaraan Aktif</div>
+                <div class="sidebar-vehicle-chip-name" id="sidebar-vehicle-name">–</div>
+                <div class="sidebar-vehicle-chip-id" id="sidebar-device-id">–</div>
+
+                <div class="sidebar-section-label">Navigasi</div>
+                <nav class="nav-menu">
+                <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="nav-icon fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+                <a href="diagnostic.html" class="nav-item active" data-page="diagnostic"><i class="nav-icon fa-solid fa-stethoscope"></i><span>Servis & Perawatan</span></a>
+                <a href="history.html" class="nav-item" data-page="history"><i class="nav-icon fa-solid fa-route"></i><span>Riwayat Perjalanan</span></a>
+                <a href="reports.html" class="nav-item" data-page="reports"><i class="nav-icon fa-solid fa-chart-bar"></i><span>Laporan</span></a>
+                <a href="settings.html" class="nav-item" data-page="settings"><i class="nav-icon fa-solid fa-gear"></i><span>Pengaturan</span></a>
+                <div class="sidebar-section-label" style="padding-top:12px">Admin</div>
+                <a href="admin.html" class="nav-item"><i class="nav-icon fa-solid fa-shield-halved"></i><span>Fleet Management</span></a>
+            </nav>
+
+                <!-- Sidebar Footer -->
+                <div class="sidebar-footer">
+                    <div class="sidebar-user" onclick="logout()">
+                        <div class="avatar" data-user-avatar>?</div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                                data-user-name>–</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.45)" data-user-email>–</div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right-from-bracket"
+                            style="color:rgba(255,255,255,0.35);font-size:13px"></i>
+                    </div>
+                </div>
         </aside>
+        
         <div class="main-content">
             <header class="topbar">
                 <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>

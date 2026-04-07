@@ -148,68 +148,55 @@
             </div>
 
             <!-- Vehicle info chip -->
-            <div
-                style="margin: 12px; background: rgba(255,255,255,0.07); border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.1);">
-                <div
-                    style="font-size: 10px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">
-                    Kendaraan Aktif</div>
-                <div style="font-size: 13px; font-weight: 700; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-                    id="sidebar-vehicle-name">–</div>
-                <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px;" id="sidebar-device-id">–
-                </div>
-            </div>
+            <div class="sidebar-vehicle-chip">
+                <div class="sidebar-vehicle-chip-label">Kendaraan Aktif</div>
+                <div class="sidebar-vehicle-chip-name" id="sidebar-vehicle-name">–</div>
+                <div class="sidebar-vehicle-chip-id" id="sidebar-device-id">–</div>
 
-            <div class="sidebar-section-label">Navigasi</div>
-            <nav class="nav-menu">
-                <a href="dashboard.html" class="nav-item" data-page="dashboard">
-                    <i class="nav-icon fa-solid fa-gauge-high"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="diagnostic.html" class="nav-item" data-page="diagnostic">
-                    <i class="nav-icon fa-solid fa-stethoscope"></i>
-                    <span>Diagnostik OBD2</span>
-                    <span class="nav-badge" id="dtc-count-badge" style="display:none">!</span>
-                </a>
-                <a href="history.html" class="nav-item" data-page="history">
-                    <i class="nav-icon fa-solid fa-route"></i>
-                    <span>Riwayat Perjalanan</span>
-                </a>
-                <a href="reports.html" class="nav-item" data-page="reports">
-                    <i class="nav-icon fa-solid fa-chart-bar"></i>
-                    <span>Laporan</span>
-                </a>
-                <a href="settings.html" class="nav-item" data-page="settings">
-                    <i class="nav-icon fa-solid fa-gear"></i>
-                    <span>Pengaturan</span>
-                </a>
+                <div class="sidebar-section-label">Navigasi</div>
+                <nav class="nav-menu">
+                    <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="nav-icon fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+                <a href="diagnostic.html" class="nav-item active" data-page="diagnostic"><i class="nav-icon fa-solid fa-stethoscope"></i><span>Servis & Perawatan</span></a>
+                    <a href="history.html" class="nav-item" data-page="history">
+                        <i class="nav-icon fa-solid fa-route"></i>
+                        <span>Riwayat Perjalanan</span>
+                    </a>
+                    <a href="reports.html" class="nav-item" data-page="reports">
+                        <i class="nav-icon fa-solid fa-chart-bar"></i>
+                        <span>Laporan</span>
+                    </a>
+                    <a href="settings.html" class="nav-item" data-page="settings">
+                        <i class="nav-icon fa-solid fa-gear"></i>
+                        <span>Pengaturan</span>
+                    </a>
 
-                <div class="sidebar-section-label" style="padding-top:12px">Aksi Cepat</div>
-                <a href="#" class="nav-item" onclick="openModal('pairing-modal')" style="color:var(--accent);">
-                    <i class="nav-icon fa-solid fa-plus-circle"></i>
-                    <span>Tambah Kendaraan</span>
-                </a>
+                    <div class="sidebar-section-label" style="padding-top:12px">Aksi Cepat</div>
+                    <a href="#" class="nav-item" onclick="openModal('pairing-modal')" style="color:var(--accent);">
+                        <i class="nav-icon fa-solid fa-plus-circle"></i>
+                        <span>Tambah Kendaraan</span>
+                    </a>
 
-                <div class="sidebar-section-label" id="admin-section-label" style="padding-top:12px">Admin</div>
-                <a href="admin.html" class="nav-item">
-                <a href="admin.html" class="nav-item" id="admin-nav-item">
-                    <i class="nav-icon fa-solid fa-shield-halved"></i>
-                    <span>Fleet Management</span>
-                </a>
-            </nav>
+                    <div class="sidebar-section-label" id="admin-section-label" style="padding-top:12px">Admin</div>
+                    <a href="admin.html" class="nav-item">
+                        <a href="admin.html" class="nav-item" id="admin-nav-item">
+                            <i class="nav-icon fa-solid fa-shield-halved"></i>
+                            <span>Fleet Management</span>
+                        </a>
+                </nav>
 
-            <!-- Sidebar Footer -->
-            <div class="sidebar-footer">
-                <div class="sidebar-user" onclick="logout()">
-                    <div class="avatar" data-user-avatar>?</div>
-                    <div style="flex:1;min-width:0">
-                        <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-                            data-user-name>–</div>
-                        <div style="font-size:11px;color:rgba(255,255,255,0.45)" data-user-email>–</div>
+                <!-- Sidebar Footer -->
+                <div class="sidebar-footer">
+                    <div class="sidebar-user">
+                        <div class="avatar" data-user-avatar>?</div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                                data-user-name>–</div>
+                            <div style="font-size:11px;color:rgba(255,255,255,0.45)" data-user-email>–</div>
+                        </div>
+                        <i class="fa-solid fa-arrow-right-from-bracket"
+                            style="color:rgba(255,255,255,0.35);font-size:13px"></i>
                     </div>
-                    <i class="fa-solid fa-arrow-right-from-bracket"
-                        style="color:rgba(255,255,255,0.35);font-size:13px"></i>
                 </div>
-            </div>
         </aside>
 
         <!-- ======================================================================
@@ -224,19 +211,24 @@
                 </button>
                 <div>
                     <div class="topbar-title" style="font-size:16px;">Kendaraan</div>
-                    <div class="breadcrumb" style="white-space:nowrap;"><span id="topbar-vehicle" style="font-weight:700;color:var(--text-primary);">–</span></div>
+                    <div class="breadcrumb" style="white-space:nowrap;"><span id="topbar-vehicle"
+                            style="font-weight:700;color:var(--text-primary);">–</span></div>
                 </div>
                 <div style="flex:1"></div>
 
                 <!-- Vehicle Switcher (Admin/Multi-Vehicle) -->
                 <div id="vehicle-switcher-container" style="display:none; position:relative; margin-right:12px;">
-                    <button class="btn btn-secondary btn-sm" onclick="toggleVehicleSwitcher(event)" id="vehicle-switcher-btn" style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border-glass)">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleVehicleSwitcher(event)"
+                        id="vehicle-switcher-btn"
+                        style="display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border-glass)">
                         <i class="fa-solid fa-car-side" style="color:var(--accent)"></i>
-                        <span id="switcher-current-name" style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kendaraan</span>
+                        <span id="switcher-current-name"
+                            style="max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kendaraan</span>
                         <i class="fa-solid fa-chevron-down" style="font-size:10px;color:var(--text-muted)"></i>
                     </button>
                     <!-- Dropdown -->
-                    <div id="vehicle-switcher-dropdown" style="display:none; position:absolute; top:110%; right:0; width:220px; background:var(--surface); border:1px solid var(--border-glass); border-radius:12px; box-shadow:var(--shadow-card); z-index:1000; overflow:hidden;">
+                    <div id="vehicle-switcher-dropdown"
+                        style="display:none; position:absolute; top:110%; right:0; width:220px; background:var(--surface); border:1px solid var(--border-glass); border-radius:12px; box-shadow:var(--shadow-card); z-index:1000; overflow:hidden;">
                         <!-- JS populated items -->
                     </div>
                 </div>
@@ -258,7 +250,8 @@
 
                 <div style="display:flex; align-items:center; gap:12px;">
                     <!-- Theme Toggle -->
-                    <button class="btn btn-secondary" id="theme-toggle" onclick="toggleTheme()" style="width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%">
+                    <button class="btn btn-secondary" id="theme-toggle" onclick="toggleTheme()"
+                        style="width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%">
                         <i class="fa-solid fa-moon" id="theme-icon"></i>
                     </button>
                     <!-- User avatar -->
@@ -277,26 +270,43 @@
                 <!-- ──────────────────────────────────────────────────────────
                  CAN SCANNER METRICS (NEW)
                  ────────────────────────────────────────────────────────── -->
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:16px;">
-                    <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
-                        <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">Distance Travelled</div>
-                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1" id="val-distance">0.00</div>
+                <div
+                    style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:16px;">
+                    <div class="stat-card"
+                        style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
+                        <div
+                            style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">
+                            Distance Travelled</div>
+                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1"
+                            id="val-distance">0.00</div>
                         <div style="font-size:13px; font-weight:500; color:var(--text-secondary)">km</div>
                     </div>
-                    <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
-                        <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">Fuel Used</div>
-                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1" id="val-fuel-used">0.0</div>
+                    <div class="stat-card"
+                        style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
+                        <div
+                            style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">
+                            Fuel Used</div>
+                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1"
+                            id="val-fuel-used">0.0</div>
                         <div style="font-size:13px; font-weight:500; color:var(--text-secondary)">L</div>
                     </div>
-                    <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
-                        <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">Avg Fuel Cons.</div>
-                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1" id="val-avg-fuel">0.0</div>
+                    <div class="stat-card"
+                        style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
+                        <div
+                            style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">
+                            Avg Fuel Cons.</div>
+                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1"
+                            id="val-avg-fuel">0.0</div>
                         <div style="font-size:13px; font-weight:500; color:var(--text-secondary)">L/100km</div>
                     </div>
                     <!-- Added Inst. Fuel Cons to match app -->
-                    <div class="stat-card" style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
-                        <div style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">Inst. Fuel Rate</div>
-                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1" id="val-inst-fuel">0.00</div>
+                    <div class="stat-card"
+                        style="flex-direction:column; align-items:center; text-align:center; padding:20px;">
+                        <div
+                            style="font-size:12px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em">
+                            Inst. Fuel Rate</div>
+                        <div style="font-size:32px; font-weight:800; color:var(--text-primary); margin:8px 0; line-height:1"
+                            id="val-inst-fuel">0.00</div>
                         <div style="font-size:13px; font-weight:500; color:var(--text-secondary)">L/h</div>
                     </div>
                 </div>
@@ -394,9 +404,9 @@
                  ────────────────────────────────────────────────────────── -->
                 <div class="main-grid">
 
-                    <!-- LEFT: MAP -->
-                    <div class="card" style="display:flex;flex-direction:column;min-height:400px;">
-                        <div class="card-header">
+                    <!-- LEFT: MAP (Google Maps Style) -->
+                    <div class="card" style="display:flex;flex-direction:column;min-height:400px;overflow:hidden;">
+                        <div class="card-header" style="border-bottom:1px solid var(--border-glass);">
                             <div class="card-title">
                                 <div class="card-title-icon" style="background:rgba(6,182,212,0.1);color:var(--accent)">
                                     <i class="fa-solid fa-location-dot"></i>
@@ -404,33 +414,99 @@
                                 Lokasi Real-Time
                             </div>
                             <div style="display:flex;gap:8px;align-items:center">
-                                <span class="status-badge status-online" style="font-size:10px" id="gps-status">
-                                    <div class="status-dot"></div>GPS Aktif
-                                </span>
-                                <button class="btn btn-secondary btn-xs" onclick="centerMap()"
-                                    title="Fokus ke kendaraan">
+                                <span class="status-badge status-danger" style="font-size:10px" id="gps-status">GPS Mati</span>
+                                <button class="btn btn-secondary btn-xs" onclick="centerMap()" title="Fokus ke kendaraan">
                                     <i class="fa-solid fa-crosshairs"></i>
+                                </button>
+                                <button class="btn btn-secondary btn-xs" id="map-layer-btn" onclick="toggleLayerPanel()" title="Ganti Tampilan Peta">
+                                    <i class="fa-solid fa-layer-group"></i>
                                 </button>
                             </div>
                         </div>
-                        <div style="flex:1;padding:12px 12px 12px;">
-                            <div class="map-container" id="main-map" style="height:100%;min-height:300px;"></div>
+
+                        <!-- Map wrapper (relative so layer panel can be positioned inside) -->
+                        <div style="flex:1;position:relative;min-height:320px;">
+                            <div class="map-container" id="main-map" style="height:100%;min-height:320px;border-radius:0;"></div>
+
+                            <!-- Google Maps-style Layer Switcher Panel -->
+                            <div id="map-layer-panel" style="
+                                display:none;
+                                position:absolute;
+                                bottom:48px;
+                                left:12px;
+                                z-index:1000;
+                                background:white;
+                                border-radius:12px;
+                                box-shadow:0 4px 24px rgba(0,0,0,0.25);
+                                padding:12px;
+                                min-width:340px;
+                                font-family:'Inter',sans-serif;
+                            ">
+                                <!-- Map type row -->
+                                <div style="font-size:11px;font-weight:700;color:#5F6368;margin-bottom:8px;letter-spacing:0.06em;text-transform:uppercase;">Jenis Peta</div>
+                                <div style="display:flex;gap:8px;margin-bottom:14px;">
+                                    <div class="map-layer-item active" id="layer-road" onclick="setMapLayer('road')">
+                                        <div class="map-layer-thumb" style="background:url('https://mt1.google.com/vt/lyrs=m&x=3274&y=2092&z=12') center/cover no-repeat,linear-gradient(135deg,#E8EDF2,#C9D5E0);"></div>
+                                        <span>Peta</span>
+                                    </div>
+                                    <div class="map-layer-item" id="layer-satellite" onclick="setMapLayer('satellite')">
+                                        <div class="map-layer-thumb" style="background:url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2092/3274') center/cover no-repeat,linear-gradient(135deg,#1B4F2A,#2D5016);"></div>
+                                        <span>Satelit</span>
+                                    </div>
+                                    <div class="map-layer-item" id="layer-hybrid" onclick="setMapLayer('hybrid')">
+                                        <div class="map-layer-thumb" style="background:url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/12/2092/3274') center/cover no-repeat,linear-gradient(135deg,#162B1A,#243D13);"></div>
+                                        <span>Hibrida</span>
+                                    </div>
+                                    <div class="map-layer-item" id="layer-terrain" onclick="setMapLayer('terrain')">
+                                        <div class="map-layer-thumb" style="background:url('https://tile.opentopomap.org/9/409/261.png') center/cover no-repeat,linear-gradient(135deg,#D4E6B5,#A8C880);"></div>
+                                        <span>Terrain</span>
+                                    </div>
+                                </div>
+
+                                <!-- Detail layer row -->
+                                <div style="font-size:11px;font-weight:700;color:#5F6368;margin-bottom:8px;letter-spacing:0.06em;text-transform:uppercase;">Detail</div>
+                                <div style="display:flex;gap:8px;">
+                                    <div class="map-detail-item" id="detail-labels" onclick="toggleMapDetail('labels')">
+                                        <div class="map-detail-icon"><i class="fa-solid fa-font"></i></div>
+                                        <span>Label</span>
+                                    </div>
+                                    <div class="map-detail-item" id="detail-roads" onclick="toggleMapDetail('roads')">
+                                        <div class="map-detail-icon"><i class="fa-solid fa-road"></i></div>
+                                        <span>Jalan</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Fullscreen button -->
+                            <button onclick="toggleMapFullscreen()" style="
+                                position:absolute;top:10px;right:10px;z-index:999;
+                                background:white;border:none;border-radius:6px;
+                                width:32px;height:32px;cursor:pointer;
+                                box-shadow:0 1px 4px rgba(0,0,0,0.3);
+                                display:flex;align-items:center;justify-content:center;
+                                font-size:13px;color:#444;
+                            " title="Layar Penuh">
+                                <i class="fa-solid fa-expand" id="fullscreen-icon"></i>
+                            </button>
                         </div>
+
                         <!-- GPS info row -->
-                        <div
-                            style="padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;gap:20px;flex-wrap:wrap">
+                        <div style="padding:10px 16px;border-top:1px solid #F1F5F9;display:flex;gap:20px;flex-wrap:wrap;background:#FAFBFC;">
                             <div style="font-size:12px;color:var(--text-muted)">
                                 <i class="fa-solid fa-map-pin" style="color:var(--accent);margin-right:4px"></i>
-                                Lat: <span id="gps-lat"
-                                    style="font-weight:600;color:var(--text-primary)">–</span>&nbsp;|&nbsp;
+                                Lat: <span id="gps-lat" style="font-weight:600;color:var(--text-primary)">–</span>&nbsp;|&nbsp;
                                 Lng: <span id="gps-lng" style="font-weight:600;color:var(--text-primary)">–</span>
                             </div>
                             <div style="font-size:12px;color:var(--text-muted)">
                                 <i class="fa-solid fa-clock" style="color:var(--accent);margin-right:4px"></i>
                                 Update: <span id="gps-time" style="font-weight:600;color:var(--text-primary)">–</span>
                             </div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-left:auto;font-weight:500;color:#9CA3AF;letter-spacing:0.02em" id="current-layer-label">
+                                <i class="fa-solid fa-map" style="margin-right:4px"></i>Tampilan: Peta
+                            </div>
                         </div>
                     </div>
+
 
                     <!-- RIGHT: Status + Eco Score -->
                     <div style="display:flex;flex-direction:column;gap:16px;">
@@ -524,14 +600,17 @@
                                 </div>
 
                                 <!-- Remote Cut-Off -->
-                                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-glass)">
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-glass)">
                                     <div style="display:flex;align-items:center;gap:10px">
-                                        <div style="width:38px;height:38px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:#EF4444">
+                                        <div
+                                            style="width:38px;height:38px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:#EF4444">
                                             <i class="fa-solid fa-power-off"></i>
                                         </div>
                                         <div>
                                             <div style="font-size:12px;color:var(--text-muted)">Cut-Off Mesin</div>
-                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)" id="cutoff-text">Nonaktif</div>
+                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)"
+                                                id="cutoff-text">Nonaktif</div>
                                         </div>
                                     </div>
                                     <label class="toggle-switch">
@@ -543,18 +622,22 @@
                                 </div>
 
                                 <!-- Live Mode (Diagnostik 1s) -->
-                                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0">
+                                <div
+                                    style="display:flex;align-items:center;justify-content:space-between;padding:12px 0">
                                     <div style="display:flex;align-items:center;gap:10px">
-                                        <div style="width:38px;height:38px;border-radius:10px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:#3B82F6">
+                                        <div
+                                            style="width:38px;height:38px;border-radius:10px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;color:#3B82F6">
                                             <i class="fa-solid fa-bolt"></i>
                                         </div>
                                         <div>
                                             <div style="font-size:12px;color:var(--text-muted)">Mode Diagnostik</div>
-                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)" id="live-interval-text">Mati (Hemat Data)</div>
+                                            <div style="font-size:14px;font-weight:700;color:var(--text-primary)"
+                                                id="live-interval-text">Mati (Hemat Data)</div>
                                         </div>
                                     </div>
                                     <label class="toggle-switch">
-                                        <input type="checkbox" id="live-interval-toggle" onchange="toggleLiveMode(this)" />
+                                        <input type="checkbox" id="live-interval-toggle"
+                                            onchange="toggleLiveMode(this)" />
                                         <div class="toggle-track" style="background:var(--bg)">
                                             <div class="toggle-thumb" style="background:#3B82F6"></div>
                                         </div>
@@ -624,10 +707,7 @@
                         </div>
                     </div>
                 </div>
-        </div>
-    </div>
-
-    <!-- ──────────────────────────────────────────────────────────
+                 <!-- ──────────────────────────────────────────────────────────
                  ADDITIONAL OBD2 DETAIL ROW
                  ────────────────────────────────────────────────────────── -->
     <div class="detail-grid" style="margin-top:16px">
@@ -731,7 +811,8 @@
             </div>
         </div>
     </div>
-
+        </div>
+    </div>
     </main>
     </div>
     </div>
@@ -745,7 +826,8 @@
             <div class="modal-header" style="background:linear-gradient(135deg,var(--primary),#1E40AF);padding:24px;">
                 <div>
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                        <div style="width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:white;">
+                        <div
+                            style="width:36px;height:36px;background:rgba(255,255,255,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:white;">
                             <i class="fa-solid fa-link"></i>
                         </div>
                         <h2 style="font-size:16px;font-weight:700;color:white;">Tambah Kendaraan</h2>
@@ -757,13 +839,16 @@
             <div class="modal-body">
                 <!-- Step indicators -->
                 <div style="display:flex;margin-bottom:24px;">
-                    <div class="pairing-step-item flex-1 active-step" id="step-ind-1" style="border-radius:10px 0 0 10px;margin-bottom:0;border-right:none;text-align:center;">
+                    <div class="pairing-step-item flex-1 active-step" id="step-ind-1"
+                        style="border-radius:10px 0 0 10px;margin-bottom:0;border-right:none;text-align:center;">
                         <i class="fa-solid fa-link" style="color:#06B6D4"></i> Info
                     </div>
-                    <div class="pairing-step-item flex-1" id="step-ind-2" style="border-radius:0;margin-bottom:0;border-right:none;text-align:center;">
+                    <div class="pairing-step-item flex-1" id="step-ind-2"
+                        style="border-radius:0;margin-bottom:0;border-right:none;text-align:center;">
                         <i class="fa-solid fa-spinner"></i> Hubungkan
                     </div>
-                    <div class="pairing-step-item flex-1" id="step-ind-3" style="border-radius:0 10px 10px 0;margin-bottom:0;text-align:center;">
+                    <div class="pairing-step-item flex-1" id="step-ind-3"
+                        style="border-radius:0 10px 10px 0;margin-bottom:0;text-align:center;">
                         <i class="fa-regular fa-circle-check"></i> Selesai
                     </div>
                 </div>
@@ -774,28 +859,33 @@
                         <label class="form-label">ID Perangkat (Device ID)</label>
                         <div class="input-icon-wrap">
                             <i class="input-icon fa-solid fa-microchip"></i>
-                            <input type="text" id="device-id" class="form-input" placeholder="Contoh: ESP32-A1B2C3" style="font-family:monospace;letter-spacing:0.05em;font-weight:600" maxlength="20" />
+                            <input type="text" id="device-id" class="form-input" placeholder="Contoh: ESP32-A1B2C3"
+                                style="font-family:monospace;letter-spacing:0.05em;font-weight:600" maxlength="20" />
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">PIN Pairing (6 digit)</label>
                         <div class="input-icon-wrap" style="position:relative">
                             <i class="input-icon fa-solid fa-key"></i>
-                            <input type="password" id="device-pin" class="form-input" placeholder="● ● ● ● ● ●" maxlength="6" style="letter-spacing:0.2em;padding-right:40px" inputmode="numeric" pattern="[0-9]*" />
+                            <input type="password" id="device-pin" class="form-input" placeholder="● ● ● ● ● ●"
+                                maxlength="6" style="letter-spacing:0.2em;padding-right:40px" inputmode="numeric"
+                                pattern="[0-9]*" />
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Nama Kendaraan / Alias</label>
                         <div class="input-icon-wrap">
                             <i class="input-icon fa-solid fa-car"></i>
-                            <input type="text" id="vehicle-name" class="form-input" placeholder="Contoh: Toyota Avanza - Pribadi" />
+                            <input type="text" id="vehicle-name" class="form-input"
+                                placeholder="Contoh: Toyota Avanza - Pribadi" />
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Nomor Polisi</label>
                         <div class="input-icon-wrap">
                             <i class="input-icon fa-solid fa-id-card"></i>
-                            <input type="text" id="vehicle-plate" class="form-input" placeholder="Contoh: B 1234 ABC" style="text-transform:uppercase" />
+                            <input type="text" id="vehicle-plate" class="form-input" placeholder="Contoh: B 1234 ABC"
+                                style="text-transform:uppercase" />
                         </div>
                     </div>
                 </div>
@@ -803,16 +893,20 @@
                 <!-- STEP 2: Connecting Animation -->
                 <div class="device-step" id="device-step-2" style="display:none;">
                     <div style="text-align:center;padding:20px 0;">
-                        <h3 style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Menghubungkan...</h3>
-                        <p id="pairing-status-msg" style="font-size:13px;color:var(--text-muted);">Memverifikasi ID Perangkat & PIN...</p>
+                        <h3 style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">
+                            Menghubungkan...</h3>
+                        <p id="pairing-status-msg" style="font-size:13px;color:var(--text-muted);">Memverifikasi ID
+                            Perangkat & PIN...</p>
                     </div>
                 </div>
 
                 <!-- STEP 3: Success -->
                 <div class="device-step" id="device-step-3" style="display:none;">
                     <div style="text-align:center;padding:20px 0;">
-                        <h3 style="font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">Terhubung!</h3>
-                        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Kendaraan berhasil ditambahkan.</p>
+                        <h3 style="font-size:18px;font-weight:800;color:var(--text-primary);margin-bottom:8px;">
+                            Terhubung!</h3>
+                        <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Kendaraan berhasil
+                            ditambahkan.</p>
                     </div>
                 </div>
             </div>
@@ -942,7 +1036,7 @@
             document.getElementById('val-speed').textContent = speed;
             document.getElementById('val-rpm').textContent = rpm.toLocaleString('id-ID');
             document.getElementById('val-temp').textContent = engineTemp;
-            
+
             // Menggunakan hasil komputasi dari ESP32 (Edge Computing)
             if (document.getElementById('val-distance')) {
                 document.getElementById('val-distance').textContent = (distanceTravelled || 0).toFixed(2);
@@ -950,13 +1044,13 @@
                 document.getElementById('val-avg-fuel').textContent = (avgKml || 0).toFixed(1);
                 document.getElementById('val-inst-fuel').textContent = (instFuelRate || 0).toFixed(2);
             }
-            
+
             // Perbaikan Bug: Membagi data fuel ke Ltr & Persen (Sesuai ID HTML baru)
             if (document.getElementById('val-fuel-pct')) {
                 document.getElementById('val-fuel-pct').textContent = `(${Math.round(fuelLevel)}%)`;
-                document.getElementById('val-fuel-ltr').textContent = ((fuelLevel / 100) * 45).toFixed(1); 
+                document.getElementById('val-fuel-ltr').textContent = ((fuelLevel / 100) * 45).toFixed(1);
             }
-            
+
             if (document.getElementById('val-voltage')) {
                 document.getElementById('val-voltage').textContent = batteryVoltage + ' V';
             }
@@ -966,7 +1060,7 @@
                 const alertDiv = document.getElementById('maintenance-alert');
                 const limit = currentSettings.maintenance.lastServiceOdo + currentSettings.maintenance.serviceInterval;
                 const remaining = limit - distanceTravelled;
-                
+
                 if (remaining <= 500 && remaining > 0) {
                     alertDiv.style.display = 'block';
                     alertDiv.className = 'alert-warning';
@@ -1058,16 +1152,21 @@
 
         // ---- GPS UPDATE CALLBACK ----
         function onGPSUpdate(data) {
-            if (!data) return;
-            
-            lastGPSTimestamp = Date.now();
+            // Lewati jika data tidak valid atau koordinat [0,0] (default sebelum GPS fix)
+            if (!data || !data.valid) return;
 
-            const { lat, lng } = data;
+            const { lat, lng, timestamp } = data;
+
+            // Validasi tambahan: pastikan koordinat bukan 0,0
+            if (lat === 0 && lng === 0) return;
+
+            // Update timestamp dari data Firebase, bukan Date.now() agar akurat
+            lastGPSTimestamp = timestamp || Date.now();
 
             // Update info display
             document.getElementById('gps-lat').textContent = lat.toFixed(5);
             document.getElementById('gps-lng').textContent = lng.toFixed(5);
-            document.getElementById('gps-time').textContent = new Date().toLocaleTimeString('id-ID');
+            document.getElementById('gps-time').textContent = new Date(lastGPSTimestamp).toLocaleTimeString('id-ID');
 
             if (!map) return;
 
@@ -1087,21 +1186,37 @@
                     <div style="font-weight:800;font-size:14px;color:#0F172A;margin-bottom:4px">${AppState.currentVehicle?.vehicleName || 'Kendaraan'}</div>
                     <div style="font-size:12px;color:#64748B">${AppState.currentVehicle?.plateNumber || '–'}</div>
                     <div style="margin-top:8px;font-size:12px;color:#06B6D4;font-weight:600">
-                        <i class="fa-solid fa-gauge-high"></i> ${speed !== undefined ? speed : 0} km/h
+                        <i class="fa-solid fa-gauge-high"></i> ${data.speed || 0} km/h
                     </div>
                 </div>
             `);
+                // Auto-center peta ke lokasi kendaraan saat pertama kali GPS valid
+                map.setView(latlng, 16, { animate: true });
             } else {
                 carMarker.setLatLng(latlng);
-                // Calculate distance for trip stats
-                if (lastGPSPos) {
-                    // Removed simple GPS distance calculation to use more accurate speed integration
-                }
                 lastGPSPos = latlng;
             }
         }
 
-        // ---- INIT MAP ----
+        // ---- INIT MAP (Multi-layer Google Maps style) ----
+        let layerRoad, layerRoadDark, layerSatellite, layerHybridLabels, layerTerrain, layerRoadsOverlay;
+        let currentMapLayerType = 'road';
+        let detailLabelsOn = true;
+        let detailRoadsOn = false;
+        let isMapFullscreen = false;
+
+        // Definisi tile layers
+        const TILE_DEFS = {
+            road:      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+            roadDark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+            satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+            terrain:   'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+            // Label overlay untuk satellite/hybrid (OpenStreetMap labels)
+            hybridLabels: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
+            // Roads overlay untuk satellite
+            roadsOverlay:  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_no_labels/{z}/{x}/{y}{r}.png',
+        };
+
         function initMap() {
             map = L.map('main-map', {
                 center: APP_CONFIG.defaultMapCenter,
@@ -1109,32 +1224,154 @@
                 zoomControl: false,
             });
 
-            // Tile layer (CartoDB Minimalist)
+            // Base layers
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const url = isDark 
-                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-                
-            tileLayer = L.tileLayer(url, {
-                attribution: '© <a href="https://carto.com/">CartoDB</a>',
-                maxZoom: 19,
-            }).addTo(map);
+            layerRoad = L.tileLayer(TILE_DEFS.road, { attribution: '© <a href="https://carto.com/">CartoDB</a>', maxZoom: 19 });
+            layerRoadDark = L.tileLayer(TILE_DEFS.roadDark, { attribution: '© <a href="https://carto.com/">CartoDB</a>', maxZoom: 19 });
+            layerSatellite = L.tileLayer(TILE_DEFS.satellite, { attribution: '© <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics', maxZoom: 19 });
+            layerTerrain = L.tileLayer(TILE_DEFS.terrain, { attribution: '© <a href="https://opentopomap.org">OpenTopoMap</a>', maxZoom: 17 });
+
+            // Overlay layers
+            layerHybridLabels = L.tileLayer(TILE_DEFS.hybridLabels, { attribution: '', maxZoom: 19, opacity: 1.0, pane: 'overlayPane' });
+            layerRoadsOverlay = L.tileLayer(TILE_DEFS.roadsOverlay, { attribution: '', maxZoom: 19, opacity: 0.7, pane: 'overlayPane' });
+
+            // Start with road (default)
+            tileLayer = isDark ? layerRoadDark : layerRoad;
+            tileLayer.addTo(map);
 
             L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // Close layer panel when clicking on map
+            map.on('click', () => {
+                document.getElementById('map-layer-panel').style.display = 'none';
+            });
+        }
+
+        /**
+         * Ganti jenis peta: 'road' | 'satellite' | 'hybrid' | 'terrain'
+         */
+        function setMapLayer(type) {
+            if (!map) return;
+            currentMapLayerType = type;
+
+            // Hapus semua base layer yang mungkin aktif
+            [layerRoad, layerRoadDark, layerSatellite, layerTerrain, layerHybridLabels, layerRoadsOverlay].forEach(l => {
+                if (l && map.hasLayer(l)) map.removeLayer(l);
+            });
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const layerLabels = ['Current Layer'];
+            const layerIcons = { road:'fa-map', satellite:'fa-satellite', hybrid:'fa-layer-group', terrain:'fa-mountain' };
+
+            switch(type) {
+                case 'road':
+                    tileLayer = isDark ? layerRoadDark : layerRoad;
+                    tileLayer.addTo(map);
+                    document.getElementById('current-layer-label').innerHTML = '<i class="fa-solid fa-map" style="margin-right:4px"></i>Tampilan: Peta';
+                    break;
+                case 'satellite':
+                    layerSatellite.addTo(map);
+                    tileLayer = layerSatellite;
+                    // Tambah label overlay jika aktif
+                    if (detailLabelsOn) layerHybridLabels.addTo(map);
+                    if (detailRoadsOn) layerRoadsOverlay.addTo(map);
+                    document.getElementById('current-layer-label').innerHTML = '<i class="fa-solid fa-satellite" style="margin-right:4px"></i>Tampilan: Satelit';
+                    break;
+                case 'hybrid':
+                    layerSatellite.addTo(map);
+                    layerHybridLabels.addTo(map);
+                    tileLayer = layerSatellite;
+                    document.getElementById('current-layer-label').innerHTML = '<i class="fa-solid fa-layer-group" style="margin-right:4px"></i>Tampilan: Hibrida';
+                    break;
+                case 'terrain':
+                    layerTerrain.addTo(map);
+                    tileLayer = layerTerrain;
+                    document.getElementById('current-layer-label').innerHTML = '<i class="fa-solid fa-mountain" style="margin-right:4px"></i>Tampilan: Terrain';
+                    break;
+            }
+
+            // Update active state di UI
+            ['road','satellite','hybrid','terrain'].forEach(id => {
+                const el = document.getElementById('layer-' + id);
+                if (el) el.classList.toggle('active', id === type);
+            });
+
+            // Kecuali hybrid (selalu punya label), update label toggle UI
+            if (type !== 'hybrid') {
+                const labelBtn = document.getElementById('detail-labels');
+                if (labelBtn) labelBtn.classList.toggle('active', detailLabelsOn && (type === 'satellite'));
+            }
+        }
+
+        /**
+         * Toggle detail overlay: 'labels' | 'roads'
+         */
+        function toggleMapDetail(detailType) {
+            if (!map) return;
+            if (detailType === 'labels') {
+                detailLabelsOn = !detailLabelsOn;
+                document.getElementById('detail-labels').classList.toggle('active', detailLabelsOn);
+                if (currentMapLayerType === 'satellite') {
+                    if (detailLabelsOn) layerHybridLabels.addTo(map);
+                    else if (map.hasLayer(layerHybridLabels)) map.removeLayer(layerHybridLabels);
+                }
+            } else if (detailType === 'roads') {
+                detailRoadsOn = !detailRoadsOn;
+                document.getElementById('detail-roads').classList.toggle('active', detailRoadsOn);
+                if (currentMapLayerType === 'satellite') {
+                    if (detailRoadsOn) layerRoadsOverlay.addTo(map);
+                    else if (map.hasLayer(layerRoadsOverlay)) map.removeLayer(layerRoadsOverlay);
+                }
+            }
+        }
+
+        /**
+         * Toggle layer panel visibility
+         */
+        function toggleLayerPanel() {
+            const panel = document.getElementById('map-layer-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        /**
+         * Toggle fullscreen untuk kotak peta
+         */
+        function toggleMapFullscreen() {
+            const mapWrapper = document.getElementById('main-map').closest('.card');
+            const icon = document.getElementById('fullscreen-icon');
+            isMapFullscreen = !isMapFullscreen;
+            if (isMapFullscreen) {
+                mapWrapper.style.cssText += ';position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;border-radius:0;height:100dvh;';
+                icon.className = 'fa-solid fa-compress';
+            } else {
+                mapWrapper.style.position = '';
+                mapWrapper.style.top = '';
+                mapWrapper.style.left = '';
+                mapWrapper.style.right = '';
+                mapWrapper.style.bottom = '';
+                mapWrapper.style.zIndex = '';
+                mapWrapper.style.borderRadius = '';
+                mapWrapper.style.height = '';
+                icon.className = 'fa-solid fa-expand';
+            }
+            setTimeout(() => map && map.invalidateSize(), 300);
         }
 
         document.addEventListener('themeChanged', (e) => {
-            if (!map || !tileLayer) return;
-            const isDark = e.detail === 'dark';
-            const url = isDark 
-                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-            tileLayer.setUrl(url);
+            if (!map) return;
+            if (currentMapLayerType === 'road') {
+                const isDark = e.detail === 'dark';
+                if (isDark) {
+                    if (map.hasLayer(layerRoad)) { map.removeLayer(layerRoad); layerRoadDark.addTo(map); tileLayer = layerRoadDark; }
+                } else {
+                    if (map.hasLayer(layerRoadDark)) { map.removeLayer(layerRoadDark); layerRoad.addTo(map); tileLayer = layerRoad; }
+                }
+            }
         });
 
         function centerMap() {
             if (map && carMarker) {
-                map.setView(carMarker.getLatLng(), 15, { animate: true });
+                map.setView(carMarker.getLatLng(), 16, { animate: true });
             }
         }
 
@@ -1195,11 +1432,11 @@
             const engineStatusText = document.getElementById('engine-status-text');
             const engineBadge = document.getElementById('engine-badge');
             const gpsBadge = document.getElementById('gps-status');
-            
+
             // Online if data received within last 60 seconds
             const isOnline = lastSensorTimestamp > 0 && (Date.now() - lastSensorTimestamp) < 60000;
             const isGpsOnline = lastGPSTimestamp > 0 && (Date.now() - lastGPSTimestamp) < 60000;
-            
+
             if (isOnline) {
                 if (connText) connText.textContent = 'Online';
                 if (connBadge) {
@@ -1220,7 +1457,7 @@
                     headerConn.className = 'status-badge status-danger';
                     headerConn.innerHTML = 'Offline';
                 }
-                
+
                 // Mesin Offline State
                 if (engineStatusText) engineStatusText.textContent = 'Tidak Diketahui';
                 if (engineBadge) {
@@ -1229,22 +1466,22 @@
                 }
 
                 // Reset Sensor Data to 0 (except Fuel)
-                if(document.getElementById('val-speed')) document.getElementById('val-speed').textContent = '0';
-                if(document.getElementById('val-rpm')) document.getElementById('val-rpm').textContent = '0';
-                if(document.getElementById('val-temp')) document.getElementById('val-temp').textContent = '0';
-                if(document.getElementById('obd-engine-load')) document.getElementById('obd-engine-load').textContent = '0 %';
-                if(document.getElementById('obd-intake-temp')) document.getElementById('obd-intake-temp').textContent = '0 °C';
-                if(document.getElementById('obd-throttle')) document.getElementById('obd-throttle').textContent = '0 %';
-                if(document.getElementById('obd-maf')) document.getElementById('obd-maf').textContent = '0 g/s';
-                if(document.getElementById('val-voltage')) document.getElementById('val-voltage').textContent = '0.0 V';
-                if(document.getElementById('val-inst-fuel')) document.getElementById('val-inst-fuel').textContent = '0.00';
+                if (document.getElementById('val-speed')) document.getElementById('val-speed').textContent = '0';
+                if (document.getElementById('val-rpm')) document.getElementById('val-rpm').textContent = '0';
+                if (document.getElementById('val-temp')) document.getElementById('val-temp').textContent = '0';
+                if (document.getElementById('obd-engine-load')) document.getElementById('obd-engine-load').textContent = '0 %';
+                if (document.getElementById('obd-intake-temp')) document.getElementById('obd-intake-temp').textContent = '0 °C';
+                if (document.getElementById('obd-throttle')) document.getElementById('obd-throttle').textContent = '0 %';
+                if (document.getElementById('obd-maf')) document.getElementById('obd-maf').textContent = '0 g/s';
+                if (document.getElementById('val-voltage')) document.getElementById('val-voltage').textContent = '0.0 V';
+                if (document.getElementById('val-inst-fuel')) document.getElementById('val-inst-fuel').textContent = '0.00';
 
                 // Reset gauges
-                if(typeof gaugeSpeed !== 'undefined' && gaugeSpeed) updateGaugeChart(gaugeSpeed, 0, 140);
-                if(typeof gaugeRpm !== 'undefined' && gaugeRpm) updateGaugeChart(gaugeRpm, 0, 6000);
-                if(typeof gaugeTemp !== 'undefined' && gaugeTemp) updateGaugeChart(gaugeTemp, 0, 140);
+                if (typeof gaugeSpeed !== 'undefined' && gaugeSpeed) updateGaugeChart(gaugeSpeed, 0, 140);
+                if (typeof gaugeRpm !== 'undefined' && gaugeRpm) updateGaugeChart(gaugeRpm, 0, 6000);
+                if (typeof gaugeTemp !== 'undefined' && gaugeTemp) updateGaugeChart(gaugeTemp, 0, 140);
             }
-            
+
             // Update GPS Badge
             if (gpsBadge) {
                 if (isGpsOnline) {
@@ -1294,14 +1531,42 @@
                 }
 
                 moveDashPairingStep(2);
-                setTimeout(() => {
+                setTimeout(async () => {
                     const vehicle = {
                         deviceId: deviceId,
                         vehicleName: vname || 'Kendaraan Baru',
                         plateNumber: plate || 'Belum diatur'
                     };
-                    localStorage.setItem('car_monitor_vehicle', JSON.stringify(vehicle));
-                    
+
+                    // Ambil daftar kendaraan yang sudah ada dari cloud
+                    const uid = AppState.currentUser?.uid;
+                    let existingVehicles = [];
+                    if (uid) {
+                        try {
+                            const cloudData = await loadVehiclesFromCloud(uid);
+                            existingVehicles = cloudData.vehicles || [];
+                        } catch(e) {
+                            existingVehicles = JSON.parse(localStorage.getItem('car_monitor_vehicles') || '[]');
+                        }
+                    }
+
+                    // Hindari duplikasi: update jika sudah ada, tambah jika baru
+                    const idx = existingVehicles.findIndex(v => v.deviceId === deviceId);
+                    if (idx >= 0) {
+                        existingVehicles[idx] = vehicle;
+                    } else {
+                        existingVehicles.push(vehicle);
+                    }
+
+                    // Simpan ke Firebase cloud
+                    if (uid) {
+                        await saveVehiclesToCloud(uid, existingVehicles, vehicle);
+                        showToast('Kendaraan berhasil disimpan ke cloud! ☁️', 'success', 2000);
+                    } else {
+                        localStorage.setItem('car_monitor_vehicle', JSON.stringify(vehicle));
+                        localStorage.setItem('car_monitor_vehicles', JSON.stringify(existingVehicles));
+                    }
+
                     moveDashPairingStep(3);
                 }, 1500);
 
@@ -1316,7 +1581,7 @@
             document.getElementById(`device-step-${step}`).style.display = 'block';
 
             document.querySelectorAll('.pairing-step-item').forEach(el => el.classList.remove('active-step', 'done'));
-            for(let i=1; i<step; i++) document.getElementById(`step-ind-${i}`).classList.add('done');
+            for (let i = 1; i < step; i++) document.getElementById(`step-ind-${i}`).classList.add('done');
             document.getElementById(`step-ind-${step}`).classList.add('active-step');
 
             const nextBtn = document.getElementById('pairing-next-btn');
@@ -1339,18 +1604,18 @@
             const dropdown = document.getElementById('vehicle-switcher-dropdown');
             const btnText = document.getElementById('switcher-current-name');
             const userVehicles = AppState.userVehicles || [];
-            
+
             if (userVehicles.length > 1) {
                 container.style.display = 'block';
                 btnText.textContent = AppState.currentVehicle?.vehicleName || 'Pilih Kendaraan';
-                
+
                 dropdown.innerHTML = userVehicles.map(v => `
                     <div onclick="switchVehicle('${v.deviceId}')" style="padding:12px 16px; cursor:pointer; border-bottom:1px solid var(--border-glass); display:flex; flex-direction:column; gap:4px; transition:0.2s" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
                         <div style="font-weight:700; font-size:13px; color:var(--text-primary)">${v.vehicleName}</div>
                         <div style="font-size:11px; color:var(--text-muted); font-family:monospace">${v.plateNumber}</div>
                     </div>
                 `).join('');
-                if(dropdown.lastElementChild) dropdown.lastElementChild.style.borderBottom = 'none';
+                if (dropdown.lastElementChild) dropdown.lastElementChild.style.borderBottom = 'none';
             }
         }
 
@@ -1367,39 +1632,39 @@
                 window.location.reload();
             }
         }
-        
+
         function toggleCutoff(input) {
             const deviceId = AppState.currentVehicle?.deviceId;
-            if(!deviceId) return;
+            if (!deviceId) return;
             const ref = db.ref(`Devices/${deviceId}/Status/CutOff`);
             ref.set(input.checked);
             const txt = document.getElementById('cutoff-text');
             if (input.checked) {
-                if(txt) txt.textContent = "AKTIF (Mesin Mati)";
+                if (txt) txt.textContent = "AKTIF (Mesin Mati)";
                 showToast('Perintah Cut-Off Mesin Dikirim.', 'warning');
             } else {
-                if(txt) txt.textContent = "Nonaktif";
+                if (txt) txt.textContent = "Nonaktif";
                 showToast('Cut-Off Mesin Dinonaktifkan.', 'info');
             }
         }
 
         function toggleLiveMode(input) {
             const deviceId = AppState.currentVehicle?.deviceId;
-            if(!deviceId) return;
-            
+            if (!deviceId) return;
+
             const txt = document.getElementById('live-interval-text');
             const ref = db.ref(`Devices/${deviceId}/Config/UpdateOverrideUntil`);
-            
-            if(input.checked) {
+
+            if (input.checked) {
                 // Set to 5 minutes from now for ESP32
                 ref.set(Date.now() + 5 * 60 * 1000).then(() => {
-                    if(txt) txt.textContent = "Aktif (1 Detik)";
+                    if (txt) txt.textContent = "Aktif (1 Detik)";
                     showToast('Mode Diagnostik Aktif (5 Menit)', 'success');
                 });
             } else {
                 // Turn off immediately
                 ref.set(0).then(() => {
-                    if(txt) txt.textContent = "Mati (Hemat Data)";
+                    if (txt) txt.textContent = "Mati (Hemat Data)";
                     showToast('Kembali ke Mode Hemat (30s)', 'info');
                 });
             }
@@ -1410,7 +1675,7 @@
             const user = requireAuth(['user', 'admin']);
             if (user && AppState.currentVehicle) {
                 const deviceId = AppState.currentVehicle.deviceId;
-                
+
                 db.ref(`Devices/${deviceId}/Status/CutOff`).on('value', (s) => {
                     const isCutoff = s.val() || false;
                     const toggle = document.getElementById('cutoff-toggle');
@@ -1426,23 +1691,23 @@
                     const txt = document.getElementById('live-interval-text');
                     if (toggle) toggle.checked = isActive;
                     if (txt) txt.textContent = isActive ? "Aktif (1 Detik)" : "Mati (Hemat Data)";
-                    
+
                     // Auto-uncheck toggle logic visually if time expires while page is open
                     if (isActive) {
                         setTimeout(() => {
-                            if(toggle) toggle.checked = false;
-                            if(txt) txt.textContent = "Mati (Hemat Data)";
+                            if (toggle) toggle.checked = false;
+                            if (txt) txt.textContent = "Mati (Hemat Data)";
                         }, override - Date.now());
                     }
                 });
             }
         });
-        
+
         document.addEventListener('click', (e) => {
             const container = document.getElementById('vehicle-switcher-container');
             if (container && !container.contains(e.target)) {
                 const dd = document.getElementById('vehicle-switcher-dropdown');
-                if(dd) dd.style.display = 'none';
+                if (dd) dd.style.display = 'none';
             }
         });
 

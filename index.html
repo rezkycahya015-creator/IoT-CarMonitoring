@@ -141,7 +141,7 @@
     <div class="auth-page">
 
         <!-- Theme Toggle (absolute top right) -->
-        <button class="btn btn-secondary" onclick="toggleTheme()" style="position:absolute; top:20px; right:20px; width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%; z-index:50;">
+        <button class="btn btn-secondary" style="position:absolute; top:20px; right:20px; width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; border-radius:50%; z-index:50;">
             <i class="fa-solid fa-moon" id="theme-icon"></i>
         </button>
 
@@ -660,11 +660,20 @@
 
             loggedInUser = user;
             showToast(`Selamat datang, ${user.displayName}! 🎉`, 'success', 2000);
-            setTimeout(() => {
+            setTimeout(async () => {
                 saveSession(user);
-                // Show pairing modal for first-time users (or if no vehicle saved)
-                const vehicle = JSON.parse(localStorage.getItem('car_monitor_vehicle'));
+                // Cek dulu dari Firebase cloud — kendaraan bisa saja sudah ada dari perangkat lain
+                let vehicle = null;
+                try {
+                    const cloudData = await loadVehiclesFromCloud(user.uid);
+                    vehicle = cloudData.activeVehicle;
+                } catch(e) {
+                    // Fallback ke localStorage jika cloud gagal
+                    vehicle = JSON.parse(localStorage.getItem('car_monitor_vehicle'));
+                }
+                
                 if (!vehicle) {
+                    // Belum ada kendaraan terpasang — tampilkan modal pairing
                     openModal('pairing-modal');
                 } else {
                     redirectAfterLogin(user);
@@ -708,6 +717,7 @@
             showToast(`Akun berhasil dibuat! Selamat bergabung, ${name}! 🎉`, 'success', 2500);
             setTimeout(() => {
                 saveSession(user);
+                // Akun baru pasti belum punya kendaraan — langsung tampilkan modal pairing
                 openModal('pairing-modal');
             }, 1000);
         }
@@ -782,14 +792,42 @@
             redirectAfterLogin(loggedInUser || AppState.currentUser);
         }
 
-        function simulatePairing(deviceId, vname, plate) {
-            setTimeout(() => {
+        async function simulatePairing(deviceId, vname, plate) {
+            setTimeout(async () => {
                 const vehicle = {
                     deviceId: deviceId,
                     vehicleName: vname || 'Kendaraan Baru',
                     plateNumber: plate || 'Belum diatur'
                 };
-                localStorage.setItem('car_monitor_vehicle', JSON.stringify(vehicle));
+
+                // Ambil daftar kendaraan yang sudah ada dari cloud (jika ada)
+                const uid = loggedInUser?.uid || AppState.currentUser?.uid;
+                let existingVehicles = [];
+                if (uid) {
+                    try {
+                        const cloudData = await loadVehiclesFromCloud(uid);
+                        existingVehicles = cloudData.vehicles || [];
+                    } catch(e) {
+                        existingVehicles = JSON.parse(localStorage.getItem('car_monitor_vehicles') || '[]');
+                    }
+                }
+
+                // Hindari duplikasi: ganti jika deviceId sudah ada, tambah jika belum
+                const idx = existingVehicles.findIndex(v => v.deviceId === deviceId);
+                if (idx >= 0) {
+                    existingVehicles[idx] = vehicle; // update
+                } else {
+                    existingVehicles.push(vehicle); // tambah baru
+                }
+
+                // Simpan ke Firebase cloud (dan localStorage sebagai cache)
+                if (uid) {
+                    await saveVehiclesToCloud(uid, existingVehicles, vehicle);
+                } else {
+                    // Fallback jika tidak ada uid (tamu)
+                    localStorage.setItem('car_monitor_vehicle', JSON.stringify(vehicle));
+                    localStorage.setItem('car_monitor_vehicles', JSON.stringify(existingVehicles));
+                }
                 
                 document.getElementById('confirm-device-id').textContent = deviceId;
                 document.getElementById('confirm-vehicle-name').textContent = vehicle.vehicleName;

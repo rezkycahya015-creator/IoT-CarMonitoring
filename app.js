@@ -14,7 +14,7 @@
 const APP_CONFIG = {
     name: 'CarMonitor IoT',
     version: '1.0.0',
-    defaultMapCenter: [-6.2088, 106.8456], // Jakarta, Indonesia
+    defaultMapCenter: [0,0], // Jakarta, Indonesia
     defaultMapZoom: 14,
     firebase: {
         apiKey: "AIzaSyBTZoF-X_FY6EYfWnrkJ4SghVDS-2hnHro",
@@ -120,23 +120,31 @@ function fetchLiveSensorData(deviceId, callback) {
 function updateMapLocation(deviceId, callback) {
     const ref = db.ref(`Devices/${deviceId}/GPS`);
 
-    // Provide a default map location initially
+    // Provide a default map location initially (but don't show on map yet)
     callback({
-        lat: APP_CONFIG.defaultMapCenter[0],
-        lng: APP_CONFIG.defaultMapCenter[1],
-        speed: 0, heading: 0, accuracy: 10, timestamp: Date.now()
+        lat: 0,
+        lng: 0,
+        speed: 0, heading: 0, accuracy: 10, timestamp: 0,
+        valid: false
     });
 
     ref.on('value', (snapshot) => {
         const val = snapshot.val();
-        if (val && val.lat && val.lng) {
+        // Validasi: lat dan lng harus ada (tidak null/undefined) dan tidak keduanya nol
+        const lat = val ? val.lat : null;
+        const lng = val ? val.lng : null;
+        const hasValidCoords = lat != null && lng != null && !(lat === 0 && lng === 0);
+        
+        if (val && hasValidCoords) {
             callback({
-                lat: val.lat,
-                lng: val.lng,
+                lat: lat,
+                lng: lng,
                 speed: val.speed || 0,
                 heading: val.heading || 0,
                 accuracy: val.accuracy || 10,
-                timestamp: val.timestamp || Date.now()
+                // Baca Timestamp dengan kapital (sesuai format Firebase dari ESP32)
+                timestamp: val.Timestamp || val.timestamp || Date.now(),
+                valid: true
             });
         }
     });
@@ -192,6 +200,73 @@ async function sendCutoffCommand(deviceId, enable) {
         return sendCommandToDevice(deviceId, 'CUT_OFF', { enable });
     } catch (e) {
         return { success: false, error: e.message };
+    }
+}
+
+// ============================================================================
+// VEHICLE CLOUD SYNC (Firebase-backed, works across devices)
+// ============================================================================
+
+/**
+ * Simpan data kendaraan user ke Firebase agar bisa diakses dari perangkat lain.
+ * Dipanggil setelah pairing berhasil atau saat ada perubahan daftar kendaraan.
+ */
+async function saveVehiclesToCloud(uid, vehicles, activeVehicle = null) {
+    if (!uid || !vehicles) return { success: false };
+    try {
+        await db.ref(`Users/${uid}/Vehicles`).set(vehicles);
+        if (activeVehicle) {
+            await db.ref(`Users/${uid}/ActiveVehicleId`).set(activeVehicle.deviceId);
+        }
+        // Sync ke localStorage sebagai cache lokal
+        localStorage.setItem('car_monitor_vehicles', JSON.stringify(vehicles));
+        if (activeVehicle) localStorage.setItem('car_monitor_vehicle', JSON.stringify(activeVehicle));
+        AppState.userVehicles = vehicles;
+        if (activeVehicle) AppState.currentVehicle = activeVehicle;
+        return { success: true };
+    } catch (e) {
+        console.error('[Cloud] Gagal menyimpan kendaraan:', e);
+        return { success: false, error: e.message };
+    }
+}
+
+/**
+ * Ambil data kendaraan user dari Firebase.
+ * Dipanggil saat login untuk memulihkan data dari perangkat manapun.
+ * @returns {Promise<{vehicles: Array, activeVehicle: Object|null}>}
+ */
+async function loadVehiclesFromCloud(uid) {
+    if (!uid) return { vehicles: [], activeVehicle: null };
+    try {
+        const [vehiclesSnap, activeIdSnap] = await Promise.all([
+            db.ref(`Users/${uid}/Vehicles`).once('value'),
+            db.ref(`Users/${uid}/ActiveVehicleId`).once('value')
+        ]);
+
+        const vehicles = vehiclesSnap.val() || [];
+        const activeId = activeIdSnap.val();
+
+        // Temukan kendaraan aktif berdasarkan ID terakhir yang disimpan
+        let activeVehicle = null;
+        if (vehicles.length > 0) {
+            activeVehicle = vehicles.find(v => v.deviceId === activeId) || vehicles[0];
+        }
+
+        // Sync hasil ke localStorage sebagai cache
+        if (vehicles.length > 0) {
+            localStorage.setItem('car_monitor_vehicles', JSON.stringify(vehicles));
+            if (activeVehicle) localStorage.setItem('car_monitor_vehicle', JSON.stringify(activeVehicle));
+            AppState.userVehicles = vehicles;
+            AppState.currentVehicle = activeVehicle;
+        }
+
+        return { vehicles, activeVehicle };
+    } catch (e) {
+        console.error('[Cloud] Gagal mengambil kendaraan:', e);
+        // Fallback ke localStorage
+        const cached = JSON.parse(localStorage.getItem('car_monitor_vehicles') || '[]');
+        const activeCached = JSON.parse(localStorage.getItem('car_monitor_vehicle') || 'null');
+        return { vehicles: cached, activeVehicle: activeCached };
     }
 }
 
@@ -356,6 +431,14 @@ function saveSession(user, vehicle = null, vehicles = null) {
     AppState.currentUser = user;
     if (vehicle) AppState.currentVehicle = vehicle;
     if (vehicles) AppState.userVehicles = vehicles;
+    
+    // Jika ada data kendaraan dan user punya uid, simpan ke Firebase cloud
+    if (user?.uid && vehicles) {
+        saveVehiclesToCloud(user.uid, vehicles, vehicle).catch(console.error);
+    } else if (user?.uid && vehicle) {
+        // Jika hanya 1 kendaraan yang diberikan
+        saveVehiclesToCloud(user.uid, [vehicle], vehicle).catch(console.error);
+    }
 }
 
 function loadSession() {
@@ -828,6 +911,8 @@ window.sendCommandToDevice = sendCommandToDevice;
 window.fetchAllVehicles = fetchAllVehicles;
 window.revokeDeviceAccess = revokeDeviceAccess;
 window.setGeofenceStatus = setGeofenceStatus;
+window.saveVehiclesToCloud = saveVehiclesToCloud;
+window.loadVehiclesFromCloud = loadVehiclesFromCloud;
 window.fetchTripHistory = fetchTripHistory;
 window.fetchTripRoute = fetchTripRoute;
 window.fetchReports = fetchReports;

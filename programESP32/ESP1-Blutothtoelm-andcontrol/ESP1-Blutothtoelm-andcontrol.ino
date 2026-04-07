@@ -8,8 +8,8 @@
 // --- KONFIGURASI PIN ---
 #define RELAY_STARTER 12
 #define RELAY_FUEL 13
-#define GPS_RX 18
-#define GPS_TX 19
+#define GPS_RX 19
+#define GPS_TX 18
 #define ESP2_RX 16
 #define ESP2_TX 17
 #define PIN_PELAMPUNG 34
@@ -23,7 +23,7 @@ BluetoothSerial SerialBT;
 // Variabel Data
 float rpm = 0, speed = 0, temp = 0;
 float engineLoad = 0, throttle = 0, intakeTemp = 0, voltage = 0;
-float lat = 0.0, lng = 0.0;
+double lat = 0.0, lng = 0.0;
 int gpsSatellites = 0;
 
 // Timing variables
@@ -38,6 +38,11 @@ bool isWaitingELM = false;
 
 // ELM Command buffer
 String elmResponse = "";
+
+// Deteksi Mesin Mati: Jika ELM tidak merespons berulang kali = mesin mati / kontak off
+int consecutiveTimeouts = 0;       // Counter timeout berturut-turut
+bool engineSignal = false;         // true = mesin menyala (ELM aktif merespons)
+const int ENGINE_OFF_THRESHOLD = 5; // Berapa kali timeout berturut-turut = mesin mati
 
 // Buffer for serial reading
 const int MAX_SERIAL_BUFFER = 128;
@@ -101,6 +106,9 @@ void parseELMData(String res) {
       long B = strtol(hexData.substring(2, 4).c_str(), NULL, 16);
       rpm = ((A * 256.0) + B) / 4.0;
       Serial.printf("  => RPM: %.0f rpm\n", rpm);
+      // Data RPM valid diterima = mesin menyala
+      consecutiveTimeouts = 0;
+      engineSignal = true;
     } 
     else if (pid == "0D" && hexData.length() >= 2) { // Speed
       speed = strtol(hexData.substring(0, 2).c_str(), NULL, 16);
@@ -186,7 +194,18 @@ void loop() {
     
     // Timeout handler: if ELM stuck without sending >
     if (isWaitingELM && millis() > elmTimeout) {
-      Serial.println("⚠️ [ELM] Timeout! Tidak ada balasan dari ELM327.");
+      consecutiveTimeouts++;
+      Serial.printf("⚠️ [ELM] Timeout! (ke-%d)\n", consecutiveTimeouts);
+      
+      // Jika terlalu banyak timeout berturut-turut, anggap mesin mati
+      if (consecutiveTimeouts >= ENGINE_OFF_THRESHOLD) {
+        if (engineSignal) {
+          Serial.println("🔴 [ENGINE] Timeout berulang! Mesin dianggap MATI.");
+        }
+        engineSignal = false;
+        rpm = 0; // Reset RPM ke 0 agar ESP2 tahu mesin mati
+      }
+      
       isWaitingELM = false;
       elmResponse = "";
       elmInterval = millis() + 500;
@@ -260,6 +279,8 @@ void loop() {
     docOut["lng"] = lng;
     docOut["fuel"] = 100; 
     docOut["fuelADC"] = analogRead(PIN_PELAMPUNG);
+    // Sinyal engine: 1=mesin menyala (ELM aktif merespons), 0=mesin mati/timeout
+    docOut["engsig"] = engineSignal ? 1 : 0;
 
     serializeJson(docOut, Serial2);
     Serial2.println(); 

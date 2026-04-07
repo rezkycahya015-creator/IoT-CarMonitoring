@@ -121,15 +121,10 @@
                 <div class="brand-text"><span class="brand-title">CarMonitor</span><span class="brand-sub">IoT
                         Dashboard</span></div>
             </div>
-            <div
-                style="margin:12px;background:rgba(255,255,255,0.07);border-radius:12px;padding:10px 12px;border:1px solid rgba(255,255,255,0.1)">
-                <div
-                    style="font-size:10px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">
-                    Kendaraan Aktif</div>
-                <div style="font-size:13px;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-                    id="sidebar-vehicle-name">–</div>
-                <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px" id="sidebar-device-id">–</div>
-            </div>
+           <div class="sidebar-vehicle-chip">
+                <div class="sidebar-vehicle-chip-label">Kendaraan Aktif</div>
+                <div class="sidebar-vehicle-chip-name" id="sidebar-vehicle-name">–</div>
+                <div class="sidebar-vehicle-chip-id" id="sidebar-device-id">–</div>
             <div class="sidebar-section-label">Navigasi</div>
             <nav class="nav-menu">
                 <a href="dashboard.html" class="nav-item" data-page="dashboard"><i
@@ -357,8 +352,24 @@
                             </div>
                         </div>
 
+                        <!-- Danger Zone -->
+                        <div class="danger-zone">
+                            <div style="font-size:13px;font-weight:700;color:#EF4444;margin-bottom:6px">
+                                <i class="fa-solid fa-triangle-exclamation" style="margin-right:6px"></i>Zona Berbahaya
+                            </div>
+                            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6">
+                                Tindakan berikut tidak dapat dibatalkan. Harap berhati-hati.
+                            </div>
+                            <button class="btn btn-secondary btn-sm" onclick="resetSettings()" style="margin-right:8px">
+                                <i class="fa-solid fa-rotate-left"></i> Reset Pengaturan
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="confirmLogout()">
+                                <i class="fa-solid fa-right-from-bracket"></i> Keluar Akun
+                            </button>
+                        </div>
+
                         <!-- MAP ZONASI KENDARAAN (GEOFENCE) -->
-                        <div class="card settings-section">
+                        <div class="card settings-section" style="margin-top: 20px">
                             <div class="card-header">
                                 <div class="card-title">
                                     <div class="card-title-icon" style="background:rgba(139,92,246,0.1);color:#8B5CF6">
@@ -548,21 +559,6 @@
                             </div>
                         </div>
 
-                        <!-- Danger Zone -->
-                        <div class="danger-zone">
-                            <div style="font-size:13px;font-weight:700;color:#EF4444;margin-bottom:6px">
-                                <i class="fa-solid fa-triangle-exclamation" style="margin-right:6px"></i>Zona Berbahaya
-                            </div>
-                            <div style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;line-height:1.6">
-                                Tindakan berikut tidak dapat dibatalkan. Harap berhati-hati.
-                            </div>
-                            <button class="btn btn-secondary btn-sm" onclick="resetSettings()" style="margin-right:8px">
-                                <i class="fa-solid fa-rotate-left"></i> Reset Pengaturan
-                            </button>
-                            <button class="btn btn-danger btn-sm" onclick="confirmLogout()">
-                                <i class="fa-solid fa-right-from-bracket"></i> Keluar Akun
-                            </button>
-                        </div>
                     </div>
                 </div>
 
@@ -700,6 +696,19 @@
                     AppState.currentVehicle.deviceId = data.vehicle.deviceId;
                     document.getElementById('sidebar-vehicle-name').textContent = data.vehicle.vehicleName;
                     localStorage.setItem('car_monitor_vehicle', JSON.stringify(AppState.currentVehicle));
+
+                    // Sync perubahan nama/plat kendaraan ke Firebase cloud
+                    const uid = AppState.currentUser?.uid;
+                    if (uid) {
+                        const vehicles = AppState.userVehicles || [];
+                        const idx = vehicles.findIndex(v => v.deviceId === AppState.currentVehicle.deviceId);
+                        if (idx >= 0) {
+                            vehicles[idx] = { ...vehicles[idx], ...AppState.currentVehicle };
+                        } else {
+                            vehicles.push(AppState.currentVehicle);
+                        }
+                        saveVehiclesToCloud(uid, vehicles, AppState.currentVehicle).catch(console.error);
+                    }
                 }
                 showToast('Pengaturan berhasil disimpan! ✅', 'success');
             } else {

@@ -147,7 +147,7 @@ body {
 }
 
 .sidebar-brand .brand-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: 0.02em;
@@ -160,6 +160,35 @@ body {
     color: var(--text-muted);
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.sidebar-vehicle-chip {
+    margin: 12px;
+    background: var(--bg);
+    border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-glass);
+}
+.sidebar-vehicle-chip-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+    font-weight: 700;
+}
+.sidebar-vehicle-chip-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sidebar-vehicle-chip-id {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
 }
 
 .sidebar-section-label {
@@ -1529,5 +1558,140 @@ body {
 
     to {
         background-position: -200% center;
+    }
+}
+
+/* ==========================================================================
+   MAP LAYER SWITCHER (Google Maps style)
+   ========================================================================== */
+
+.map-layer-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.map-layer-item span {
+    font-size: 11px;
+    font-weight: 500;
+    color: #5F6368;
+    letter-spacing: 0.01em;
+    text-align: center;
+}
+
+.map-layer-thumb {
+    width: 64px;
+    height: 48px;
+    border-radius: 8px;
+    border: 2px solid #E0E0E0;
+    overflow: hidden;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.map-layer-item:hover .map-layer-thumb {
+    border-color: #1A73E8;
+    transform: scale(1.04);
+    box-shadow: 0 2px 8px rgba(26,115,232,0.25);
+}
+
+.map-layer-item.active .map-layer-thumb {
+    border-color: #1A73E8;
+    box-shadow: 0 0 0 2px rgba(26,115,232,0.3);
+}
+
+.map-layer-item.active span {
+    color: #1A73E8;
+    font-weight: 700;
+}
+
+.map-layer-item.active .map-layer-thumb::after {
+    content: '\f00c';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    bottom: 3px;
+    right: 4px;
+    font-size: 10px;
+    color: white;
+    background: #1A73E8;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 16px;
+    text-align: center;
+}
+
+/* Detail toggle buttons */
+.map-detail-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1.5px solid #E0E0E0;
+    background: white;
+    transition: all 0.2s;
+    min-width: 68px;
+}
+
+.map-detail-item span {
+    font-size: 11px;
+    font-weight: 500;
+    color: #5F6368;
+}
+
+.map-detail-icon {
+    font-size: 14px;
+    color: #5F6368;
+    line-height: 1;
+}
+
+.map-detail-item:hover {
+    border-color: #1A73E8;
+    background: #F0F4FF;
+    color: #1A73E8;
+}
+
+.map-detail-item.active {
+    border-color: #1A73E8;
+    background: #E8F0FE;
+    color: #1A73E8;
+}
+
+.map-detail-item.active span,
+.map-detail-item.active .map-detail-icon {
+    color: #1A73E8;
+    font-weight: 700;
+}
+
+/* Panel animation */
+#map-layer-panel {
+    animation: fadeInUp 0.15s ease;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+    #map-layer-panel {
+        min-width: unset;
+        width: calc(100vw - 32px);
+        left: 8px;
+        right: 8px;
+    }
+    .map-layer-thumb {
+        width: 52px;
+        height: 40px;
     }
 }

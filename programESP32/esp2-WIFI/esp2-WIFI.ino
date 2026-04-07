@@ -44,6 +44,8 @@ float g_tripDistance = 0.0;
 float g_tripFuelUsed = 0.0;
 int g_maxSpeedInTrip = 0;
 unsigned long g_lastCalcMillis = 0;
+int g_engineOffCount = 0;          // Hysteresis: counter mesin mati berturut-turut
+const int ENGINE_OFF_DEBOUNCE = 3; // Butuh N pembacaan berturut-turut sebelum trip dihentikan
 
 unsigned long g_lastGpsPush = 0; 
 String g_currentTripID = "";
@@ -142,6 +144,17 @@ void endOfTripPush() {
     String tripPath = "Devices/" + deviceID + "/Trips";
     if (Firebase.RTDB.pushJSON(&fbdo, tripPath.c_str(), &tripData)) {
       Serial.println("✔️ Laporan Trip Akhir Berhasil Diposting!");
+      
+      // Reset Live_Data trip metrics ke 0 di Firebase agar dashboard menampilkan data segar
+      FirebaseJson resetJson;
+      resetJson.set("DistanceTravelled", 0.0);
+      resetJson.set("FuelUsed", 0.0);
+      resetJson.set("InstFuelRate", 0.0);
+      resetJson.set("AvgKML", 0.0);
+      String liveDataPath = "Devices/" + deviceID + "/Live_Data";
+      if (Firebase.RTDB.updateNode(&fbdo, liveDataPath.c_str(), &resetJson)) {
+        Serial.println("✔️ Reset metrik perjalanan di Live_Data berhasil!");
+      }
     } else {
       Serial.println("❌ Perjalanan gagal disimpan: " + fbdo.errorReason());
     }
@@ -208,24 +221,41 @@ void loop() {
         int fuelADC = doc["fuelADC"] | 0;
         
         bool engineOn = (rpm > 0);
+        // Baca sinyal dari ESP1: 1=ELM aktif merespons, 0=timeout/mesin mati
+        int engsig = doc["engsig"] | -1; // -1 jika field tidak ada (firmware lama)
+        
+        // Gunakan engsig sebagai pengecekan tambahan jika tersedia
+        if (engsig == 0) {
+          // ESP1 menyatakan ELM tidak merespons = mesin mati pasti
+          engineOn = false;
+        }
 
         // --- EDGE COMPUTING: VIRTUAL ODOMETER & FUEL ---
         if (g_lastCalcMillis == 0) g_lastCalcMillis = currentMillis;
         float dtHours = (currentMillis - g_lastCalcMillis) / 3600000.0;
         g_lastCalcMillis = currentMillis;
 
-        // Trip State Logic
-        if (engineOn && !g_tripActive) {
-           g_tripActive = true;
-           g_tripStartEpoch = currentEpoch;
-           g_tripDistance = 0;
-           g_tripFuelUsed = 0;
-           g_maxSpeedInTrip = 0;
-           g_currentTripID = String(currentEpoch); 
-           Serial.println("[TRIP] Mesin Nyala, Memulai Perekaman Riwayat Perjalanan...");
-        } else if (!engineOn && g_tripActive) {
-           Serial.println("[TRIP] Mesin Mati, Mem-push Rangkuman Perjalanan ke Basis Data...");
-           endOfTripPush();
+        // Trip State Logic dengan Hysteresis (Debounce)
+        if (engineOn) {
+          g_engineOffCount = 0; // Reset counter saat mesin menyala
+          if (!g_tripActive) {
+            g_tripActive = true;
+            g_tripStartEpoch = currentEpoch;
+            g_tripDistance = 0;
+            g_tripFuelUsed = 0;
+            g_maxSpeedInTrip = 0;
+            g_currentTripID = String(currentEpoch);
+            Serial.println("[TRIP] Mesin Nyala, Memulai Perekaman Riwayat Perjalanan...");
+          }
+        } else if (g_tripActive) {
+          // Mesin terdeteksi mati — tunggu N pembacaan berturut-turut sebelum stop trip
+          g_engineOffCount++;
+          Serial.printf("[TRIP] Sinyal mesin mati (ke-%d/%d)...\n", g_engineOffCount, ENGINE_OFF_DEBOUNCE);
+          if (g_engineOffCount >= ENGINE_OFF_DEBOUNCE) {
+            Serial.println("[TRIP] Mesin Mati Dikonfirmasi, Mem-push Rangkuman Perjalanan ke Basis Data...");
+            endOfTripPush();
+            g_engineOffCount = 0;
+          }
         }
 
         float instFuelRate = 0;

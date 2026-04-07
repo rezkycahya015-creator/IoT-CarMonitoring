@@ -4,171 +4,99 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Diagnostik OBD2 – CarMonitor IoT</title>
-    <meta name="description"
-        content="Scanner OBD2 kendaraan: baca kode kerusakan DTC dan pantau kesehatan mesin secara real-time." />
+    <title>Servis & Perawatan – CarMonitor IoT</title>
+    <meta name="description" content="Halaman servis & perawatan kendaraan: diagnostik OBD2, jadwal perawatan preventif, dan riwayat servis." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="styles.css" />
-    <!-- Firebase SDK (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <style>
-        .dtc-card {
-            background: white;
-            border-radius: 14px;
-            border: 1px solid rgba(226, 232, 240, 0.6);
-            padding: 16px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: flex-start;
-            gap: 14px;
-            transition: var(--transition);
-            box-shadow: var(--shadow-card);
-        }
+        /* ── Tab Navigation (Pills) ── */
+        .service-tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--border-glass);border-radius:14px;padding:4px;margin-bottom:20px}
+        .service-tab{flex:1;padding:10px 16px;text-align:center;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;transition:all .25s ease;color:var(--text-muted);border:none;background:transparent;font-family:'Inter',sans-serif;position:relative;overflow:hidden}
+        .service-tab:hover{color:var(--text-primary);background:rgba(37,99,235,.06)}
+        .service-tab.active{background:var(--accent);color:#fff;box-shadow:0 4px 14px var(--accent-glow)}
+        .service-tab i{margin-right:6px}
+        .tab-panel{display:none;animation:fadeTabIn .35s ease}
+        .tab-panel.active{display:block}
+        @keyframes fadeTabIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-        .dtc-card:hover {
-            box-shadow: var(--shadow-hover);
-            transform: translateX(2px);
-        }
+        /* ── Health Gauge (SVG) ── */
+        .health-gauge-wrap{position:relative;width:140px;height:140px;flex-shrink:0}
+        .health-gauge-wrap svg{transform:rotate(-90deg)}
+        .health-gauge-bg{fill:none;stroke:var(--border-glass);stroke-width:10}
+        .health-gauge-fill{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1),stroke .4s ease}
+        .health-gauge-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;transform:none}
+        .health-gauge-score{font-size:32px;font-weight:900;color:var(--text-primary);line-height:1}
+        .health-gauge-label{font-size:11px;color:var(--text-muted);font-weight:500;margin-top:2px}
 
-        .dtc-card.resolved {
-            opacity: 0.5;
-            border-style: dashed;
-        }
+        /* ── Summary Chips ── */
+        .summary-chip{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:var(--bg);border:1px solid var(--border-glass);transition:var(--transition)}
+        .summary-chip:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px)}
+        .chip-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+        .chip-value{font-size:18px;font-weight:800;color:var(--text-primary);line-height:1}
+        .chip-label{font-size:11px;color:var(--text-muted);font-weight:500;margin-top:1px}
 
-        .dtc-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
+        /* ── Live Data Grid ── */
+        .live-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+        @media(max-width:768px){.live-grid{grid-template-columns:repeat(2,1fr)}}
+        @media(max-width:480px){.live-grid{grid-template-columns:1fr}}
+        .live-item{background:var(--bg);border:1px solid var(--border-glass);border-radius:12px;padding:14px;text-align:center;transition:var(--transition)}
+        .live-item:hover{box-shadow:var(--shadow-hover);transform:translateY(-2px)}
+        .live-item .li-icon{font-size:18px;margin-bottom:6px}
+        .live-item .li-val{font-size:22px;font-weight:800;color:var(--text-primary)}
+        .live-item .li-unit{font-size:11px;color:var(--text-muted);font-weight:500}
+        .live-item .li-label{font-size:11px;color:var(--text-muted);margin-top:4px}
 
-        .health-meter {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        /* ── DTC Card ── */
+        .dtc-card{background:white;border-radius:14px;border:1px solid rgba(226,232,240,.6);padding:16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:14px;transition:var(--transition);box-shadow:var(--shadow-card)}
+        .dtc-card:hover{box-shadow:var(--shadow-hover);transform:translateX(2px)}
+        .dtc-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+        .clear-btn-wrap{background:linear-gradient(135deg,rgba(239,68,68,.05),rgba(220,38,38,.08));border:2px dashed rgba(239,68,68,.3);border-radius:16px;padding:24px;text-align:center}
+        .scan-animation{position:relative;overflow:hidden}
+        .scan-animation::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:3px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scanLine 2s ease-in-out infinite}
+        @keyframes scanLine{to{left:100%}}
 
-        .clear-btn-wrap {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(220, 38, 38, 0.08));
-            border: 2px dashed rgba(239, 68, 68, 0.3);
-            border-radius: 16px;
-            padding: 24px;
-            text-align: center;
-        }
+        /* ── Maintenance Item ── */
+        .maint-item{background:var(--surface);border:1px solid var(--border-glass);border-radius:14px;padding:18px;margin-bottom:12px;transition:var(--transition)}
+        .maint-item:hover{box-shadow:var(--shadow-hover)}
+        .maint-progress-track{height:8px;background:var(--border-glass);border-radius:99px;overflow:hidden;margin:10px 0 6px}
+        .maint-progress-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1)}
 
-        .scan-animation {
-            position: relative;
-            overflow: hidden;
-        }
+        /* ── History Timeline ── */
+        .history-row{display:flex;align-items:flex-start;gap:14px;padding:16px 0;border-bottom:1px solid var(--border-glass);transition:var(--transition)}
+        .history-row:last-child{border-bottom:none}
+        .history-row:hover{background:rgba(37,99,235,.03);border-radius:12px;padding-left:8px;padding-right:8px}
+        .history-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;box-shadow:0 0 0 4px var(--accent-glow)}
 
-        .scan-animation::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, var(--accent), transparent);
-            animation: scanLine 2s ease-in-out infinite;
-        }
+        /* ── Freeze Frame Table ── */
+        .freeze-frame-table{width:100%;font-size:12px}
+        .freeze-frame-table td{padding:8px 12px;border-bottom:1px solid #F1F5F9}
+        .freeze-frame-table td:first-child{color:var(--text-muted);font-weight:500}
+        .freeze-frame-table td:last-child{font-weight:700;color:var(--text-primary);text-align:right}
+        .freeze-frame-table tr:last-child td{border-bottom:none}
 
-        @keyframes scanLine {
-            to {
-                left: 100%;
-            }
-        }
+        /* ── Readiness Items ── */
+        .readiness-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #F1F5F9;font-size:13px}
+        .readiness-item:last-child{border-bottom:none}
 
-        .health-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-        }
-
-        @media (min-width: 640px) {
-            .health-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        .health-item {
-            background: #F8FAFC;
-            border-radius: 12px;
-            padding: 14px;
-            text-align: center;
-            border: 1px solid #E2E8F0;
-        }
-
-        .health-item .hi-value {
-            font-size: 20px;
-            font-weight: 800;
-            margin: 6px 0 2px;
-        }
-
-        .health-item .hi-label {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .freeze-frame-table {
-            width: 100%;
-            font-size: 12px;
-        }
-
-        .freeze-frame-table td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #F1F5F9;
-        }
-
-        .freeze-frame-table td:first-child {
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        .freeze-frame-table td:last-child {
-            font-weight: 700;
-            color: var(--text-primary);
-            text-align: right;
-        }
-
-        .freeze-frame-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .readiness-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #F1F5F9;
-            font-size: 13px;
-        }
-
-        .readiness-item:last-child {
-            border-bottom: none;
-        }
+        /* ── Dark theme fixes ── */
+        [data-theme="dark"] .dtc-card{background:var(--surface)}
+        [data-theme="dark"] .live-item,.maint-item{background:var(--surface)}
     </style>
 </head>
 
 <body>
     <div id="toast-container"></div>
-
     <div class="app-container">
         <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-        <!-- SIDEBAR (same as dashboard) -->
+        <!-- SIDEBAR (preserved) -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">
                 <div class="brand-icon"><i class="fa-solid fa-car-side"></i></div>
@@ -177,41 +105,28 @@
                     <span class="brand-sub">IoT Dashboard</span>
                 </div>
             </div>
-            <div
-                style="margin:12px;background:rgba(255,255,255,0.07);border-radius:12px;padding:10px 12px;border:1px solid rgba(255,255,255,0.1)">
-                <div
-                    style="font-size:10px;color:rgba(255,255,255,0.45);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">
-                    Kendaraan Aktif</div>
-                <div style="font-size:13px;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-                    id="sidebar-vehicle-name">–</div>
-                <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px" id="sidebar-device-id">–</div>
-            </div>
+           <div class="sidebar-vehicle-chip">
+                <div class="sidebar-vehicle-chip-label">Kendaraan Aktif</div>
+                <div class="sidebar-vehicle-chip-name" id="sidebar-vehicle-name">–</div>
+                <div class="sidebar-vehicle-chip-id" id="sidebar-device-id">–</div>
             <div class="sidebar-section-label">Navigasi</div>
             <nav class="nav-menu">
-                <a href="dashboard.html" class="nav-item" data-page="dashboard"><i
-                        class="nav-icon fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
-                <a href="diagnostic.html" class="nav-item active" data-page="diagnostic"><i
-                        class="nav-icon fa-solid fa-stethoscope"></i><span>Diagnostik OBD2</span></a>
-                <a href="history.html" class="nav-item" data-page="history"><i
-                        class="nav-icon fa-solid fa-route"></i><span>Riwayat Perjalanan</span></a>
-                <a href="reports.html" class="nav-item" data-page="reports"><i
-                        class="nav-icon fa-solid fa-chart-bar"></i><span>Laporan</span></a>
-                <a href="settings.html" class="nav-item" data-page="settings"><i
-                        class="nav-icon fa-solid fa-gear"></i><span>Pengaturan</span></a>
+                <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="nav-icon fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+                <a href="diagnostic.html" class="nav-item active" data-page="diagnostic"><i class="nav-icon fa-solid fa-stethoscope"></i><span>Servis & Perawatan</span></a>
+                <a href="history.html" class="nav-item" data-page="history"><i class="nav-icon fa-solid fa-route"></i><span>Riwayat Perjalanan</span></a>
+                <a href="reports.html" class="nav-item" data-page="reports"><i class="nav-icon fa-solid fa-chart-bar"></i><span>Laporan</span></a>
+                <a href="settings.html" class="nav-item" data-page="settings"><i class="nav-icon fa-solid fa-gear"></i><span>Pengaturan</span></a>
                 <div class="sidebar-section-label" style="padding-top:12px">Admin</div>
-                <a href="admin.html" class="nav-item"><i class="nav-icon fa-solid fa-shield-halved"></i><span>Fleet
-                        Management</span></a>
+                <a href="admin.html" class="nav-item"><i class="nav-icon fa-solid fa-shield-halved"></i><span>Fleet Management</span></a>
             </nav>
             <div class="sidebar-footer">
-                <div class="sidebar-user" onclick="logout()">
+                <div class="sidebar-user">
                     <div class="avatar" data-user-avatar>?</div>
                     <div style="flex:1;min-width:0">
-                        <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-                            data-user-name>–</div>
+                        <div style="font-size:13px;font-weight:600;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" data-user-name>–</div>
                         <div style="font-size:11px;color:rgba(255,255,255,0.45)" data-user-email>–</div>
                     </div>
-                    <i class="fa-solid fa-arrow-right-from-bracket"
-                        style="color:rgba(255,255,255,0.35);font-size:13px"></i>
+                    <i class="fa-solid fa-arrow-right-from-bracket" style="color:rgba(255,255,255,0.35);font-size:13px"></i>
                 </div>
             </div>
         </aside>
@@ -221,491 +136,413 @@
             <header class="topbar">
                 <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
                 <div>
-                    <div class="topbar-title" style="font-size:16px;">Diagnostik OBD2</div>
+                    <div class="topbar-title" style="font-size:16px;">Servis & Perawatan</div>
                     <div class="breadcrumb" style="white-space:nowrap;"><span id="topbar-vehicle" style="font-weight:700;color:var(--text-primary);">–</span></div>
                 </div>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary btn-sm" id="scan-btn" onclick="runFullScan()">
-                    <i class="fa-solid fa-magnifying-glass-chart"></i> Scan Sekarang
+                    <i class="fa-solid fa-magnifying-glass-chart"></i> Scan OBD2
                 </button>
-                <div class="avatar" data-user-avatar style="width:36px;height:36px;font-size:13px;cursor:pointer"
-                    onclick="logout()">?</div>
+                <div class="avatar" data-user-avatar style="width:36px;height:36px;font-size:13px;cursor:pointer" onclick="logout()">?</div>
             </header>
 
             <main class="page-content">
 
-                <!-- ── TOP ROW: Health Score + Clear DTC ── -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-
-                    <!-- Vehicle Health Score -->
+                <!-- ═══ TOP: Health Score + Summary ═══ -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+                    <!-- Health Score Card -->
                     <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">
-                                <div class="card-title-icon" style="background:rgba(16,185,129,0.1);color:#10B981">
-                                    <i class="fa-solid fa-heart-pulse"></i>
-                                </div>
-                                Kesehatan Kendaraan
-                            </div>
-                        </div>
-                        <div class="card-body" style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
-                            <!-- Donut health chart -->
-                            <div style="position:relative;width:120px;height:120px;flex-shrink:0">
-                                <canvas id="health-donut" width="120" height="120"></canvas>
-                                <div
-                                    style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
-                                    <span style="font-size:22px;font-weight:900;color:var(--text-primary)"
-                                        id="health-score">72</span>
-                                    <span style="font-size:10px;color:var(--text-muted)">/ 100</span>
+                        <div class="card-body" style="display:flex;align-items:center;gap:20px;padding:24px">
+                            <div class="health-gauge-wrap">
+                                <svg viewBox="0 0 140 140" width="140" height="140">
+                                    <circle class="health-gauge-bg" cx="70" cy="70" r="58"/>
+                                    <circle class="health-gauge-fill" id="health-gauge-circle" cx="70" cy="70" r="58" stroke="#10B981" stroke-dasharray="364.42" stroke-dashoffset="91.1"/>
+                                </svg>
+                                <div class="health-gauge-center">
+                                    <span class="health-gauge-score" id="health-score">75</span>
+                                    <span class="health-gauge-label">Health Score</span>
                                 </div>
                             </div>
-                            <div style="flex:1;min-width:200px">
-                                <div style="font-size:18px;font-weight:800;color:#F59E0B;margin-bottom:4px"
-                                    id="health-label">Kondisi Baik</div>
-                                <div style="font-size:13px;color:var(--text-secondary);margin-bottom:14px"
-                                    id="health-desc">Terdapat beberapa kode kerusakan aktif yang perlu diperhatikan.
-                                </div>
-                                <div class="health-grid" id="health-grid">
-                                    <div class="health-item">
-                                        <div style="font-size:18px;color:#EF4444"><i
-                                                class="fa-solid fa-circle-xmark"></i></div>
-                                        <div class="hi-value" id="h-dtc-count">3</div>
-                                        <div class="hi-label">DTC Aktif</div>
-                                    </div>
-                                    <div class="health-item">
-                                        <div style="font-size:18px;color:#10B981"><i
-                                                class="fa-solid fa-circle-check"></i></div>
-                                        <div class="hi-value" id="h-readiness">6/8</div>
-                                        <div class="hi-label">Readiness</div>
-                                    </div>
-                                    <div class="health-item">
-                                        <div style="font-size:18px;color:#F59E0B"><i
-                                                class="fa-solid fa-clock-rotate-left"></i></div>
-                                        <div class="hi-value" id="h-last-scan">–</div>
-                                        <div class="hi-label">Last Scan</div>
-                                    </div>
-                                </div>
+                            <div style="flex:1;min-width:0">
+                                <div style="font-size:18px;font-weight:800;margin-bottom:4px" id="health-label" class="text-emerald-500">Kondisi Baik</div>
+                                <div style="font-size:13px;color:var(--text-secondary);line-height:1.6" id="health-desc">Kendaraan dalam kondisi baik. Periksa jadwal perawatan rutin.</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Clear DTC Panel -->
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">
-                                <div class="card-title-icon" style="background:rgba(239,68,68,0.1);color:#EF4444">
-                                    <i class="fa-solid fa-eraser"></i>
+                    <!-- Summary Chips -->
+                    <div class="card lg:col-span-2">
+                        <div class="card-body" style="padding:20px">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div class="summary-chip">
+                                    <div class="chip-icon" style="background:rgba(245,158,11,.1);color:#F59E0B"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                    <div><div class="chip-value" id="sum-warnings">0</div><div class="chip-label">Peringatan Servis</div></div>
                                 </div>
-                                Hapus Kode Kerusakan
+                                <div class="summary-chip">
+                                    <div class="chip-icon" style="background:rgba(239,68,68,.1);color:#EF4444"><i class="fa-solid fa-circle-xmark"></i></div>
+                                    <div><div class="chip-value" id="sum-dtc">0</div><div class="chip-label">Kode DTC Aktif</div></div>
+                                </div>
+                                <div class="summary-chip">
+                                    <div class="chip-icon" style="background:rgba(16,185,129,.1);color:#10B981"><i class="fa-solid fa-shield-check"></i></div>
+                                    <div><div class="chip-value" id="sum-tax" style="font-size:14px">Aman</div><div class="chip-label">Status Pajak</div></div>
+                                </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ TABS ═══ -->
+                <div class="service-tabs" id="service-tabs">
+                    <button class="service-tab active" data-tab="obd2" onclick="switchTab('obd2')"><i class="fa-solid fa-microchip"></i><span class="hidden sm:inline">Diagnostik OBD2</span><span class="sm:hidden">OBD2</span></button>
+                    <button class="service-tab" data-tab="maintenance" onclick="switchTab('maintenance')"><i class="fa-solid fa-wrench"></i><span class="hidden sm:inline">Jadwal Perawatan</span><span class="sm:hidden">Perawatan</span></button>
+                    <button class="service-tab" data-tab="history" onclick="switchTab('history')"><i class="fa-solid fa-clock-rotate-left"></i><span class="hidden sm:inline">Riwayat Servis</span><span class="sm:hidden">Riwayat</span></button>
+                </div>
+
+                <!-- ══════ TAB 1: Diagnostik OBD2 ══════ -->
+                <div class="tab-panel active" id="panel-obd2">
+                    <!-- Live Data -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <div class="card-title"><div class="card-title-icon" style="background:rgba(59,130,246,.1);color:#3B82F6"><i class="fa-solid fa-signal"></i></div>Live Data Sensor</div>
+                            <span class="status-badge scan-animation" id="scan-status" style="background:rgba(6,182,212,.1);color:var(--accent);font-size:10px"><div class="status-dot" style="background:var(--accent)"></div>Menunggu Scan</span>
                         </div>
                         <div class="card-body">
-                            <div class="clear-btn-wrap">
-                                <div style="font-size:40px;margin-bottom:12px">🔧</div>
-                                <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:6px">
-                                    Reset Semua DTC</div>
-                                <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">
-                                    Mengirimkan perintah ke perangkat ESP32 untuk menghapus semua kode kerusakan aktif
-                                    (DTC) dari ECU kendaraan.
-                                </div>
-                                <button class="btn btn-danger btn-danger-lg btn-full" id="clear-dtc-btn"
-                                    onclick="handleClearDTC()">
-                                    <i class="fa-solid fa-trash-can"></i>
-                                    Hapus Kode Kerusakan (Clear DTC)
-                                </button>
-                                <div style="font-size:11px;color:var(--text-muted);margin-top:10px">
-                                    ⚠️ Pastikan masalah sudah diperbaiki sebelum menghapus kode.
+                            <div class="live-grid">
+                                <div class="live-item"><div class="li-icon" style="color:#3B82F6"><i class="fa-solid fa-gauge-high"></i></div><div class="li-val" id="ld-rpm">0</div><div class="li-unit">RPM</div><div class="li-label">Engine RPM</div></div>
+                                <div class="live-item"><div class="li-icon" style="color:#10B981"><i class="fa-solid fa-temperature-half"></i></div><div class="li-val" id="ld-temp">0</div><div class="li-unit">°C</div><div class="li-label">Suhu Mesin</div></div>
+                                <div class="live-item"><div class="li-icon" style="color:#8B5CF6"><i class="fa-solid fa-tachograph-digital"></i></div><div class="li-val" id="ld-speed">0</div><div class="li-unit">km/h</div><div class="li-label">Kecepatan</div></div>
+                                <div class="live-item"><div class="li-icon" style="color:#F59E0B"><i class="fa-solid fa-bolt"></i></div><div class="li-val" id="ld-load">0</div><div class="li-unit">%</div><div class="li-label">Engine Load</div></div>
+                                <div class="live-item"><div class="li-icon" style="color:#EF4444"><i class="fa-solid fa-car-battery"></i></div><div class="li-val" id="ld-voltage">0</div><div class="li-unit">V</div><div class="li-label">Tegangan Aki</div></div>
+                                <div class="live-item"><div class="li-icon" style="color:#06B6D4"><i class="fa-solid fa-wind"></i></div><div class="li-val" id="ld-throttle">0</div><div class="li-unit">%</div><div class="li-label">Throttle</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DTC List + Clear -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                        <div class="card lg:col-span-2">
+                            <div class="card-header">
+                                <div class="card-title"><div class="card-title-icon" style="background:rgba(239,68,68,.1);color:#EF4444"><i class="fa-solid fa-triangle-exclamation"></i></div>Kode Kerusakan (DTC)<span id="dtc-total-badge" style="background:rgba(239,68,68,.12);color:#EF4444;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:4px">0 Kode</span></div>
+                            </div>
+                            <div class="card-body">
+                                <div id="dtc-loading" style="text-align:center;padding:32px;display:none"><div style="width:48px;height:48px;border:4px solid #E2E8F0;border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px"></div><div style="font-size:13px;color:var(--text-muted)">Membaca data dari ECU...</div></div>
+                                <div id="dtc-empty" style="text-align:center;padding:40px;display:none"><div style="font-size:48px;margin-bottom:12px">✅</div><div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px">Tidak Ada Kode Kerusakan</div><div style="font-size:13px;color:var(--text-muted)">Semua sistem kendaraan berfungsi normal.</div></div>
+                                <div id="dtc-list"></div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><div class="card-title"><div class="card-title-icon" style="background:rgba(239,68,68,.1);color:#EF4444"><i class="fa-solid fa-eraser"></i></div>Hapus DTC</div></div>
+                            <div class="card-body">
+                                <div class="clear-btn-wrap">
+                                    <div style="font-size:40px;margin-bottom:12px">🔧</div>
+                                    <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:6px">Reset Semua DTC</div>
+                                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">Kirim perintah ke ESP32 untuk menghapus semua kode kerusakan aktif.</div>
+                                    <button class="btn btn-danger btn-full" id="clear-dtc-btn" onclick="handleClearDTC()"><i class="fa-solid fa-trash-can"></i> Hapus Semua DTC</button>
+                                    <button class="btn btn-secondary btn-full" style="margin-top:8px" onclick="runFullScan()"><i class="fa-solid fa-rotate"></i> Scan Ulang</button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Freeze Frame + Readiness -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="card">
+                            <div class="card-header"><div class="card-title"><div class="card-title-icon" style="background:rgba(59,130,246,.1);color:#3B82F6"><i class="fa-solid fa-camera"></i></div>Freeze Frame Data</div></div>
+                            <div class="card-body" style="padding:0">
+                                <table class="freeze-frame-table"><tbody>
+                                    <tr><td>Kecepatan</td><td id="ff-speed">– km/h</td></tr>
+                                    <tr><td>Engine RPM</td><td id="ff-rpm">– RPM</td></tr>
+                                    <tr><td>Suhu Pendingin</td><td id="ff-coolant">– °C</td></tr>
+                                    <tr><td>Throttle</td><td id="ff-throttle">– %</td></tr>
+                                    <tr><td>Tegangan Aki</td><td id="ff-voltage">– V</td></tr>
+                                    <tr><td>Suhu Udara Masuk</td><td id="ff-intake">– °C</td></tr>
+                                    <tr><td>Tekanan Manifold</td><td id="ff-map">– kPa</td></tr>
+                                    <tr><td>Short Term Fuel Trim</td><td id="ff-stft">– %</td></tr>
+                                </tbody></table>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><div class="card-title"><div class="card-title-icon" style="background:rgba(16,185,129,.1);color:#10B981"><i class="fa-solid fa-list-check"></i></div>Monitor Readiness</div><span style="font-size:11px;color:var(--text-muted)" id="readiness-summary">–</span></div>
+                            <div class="card-body" style="padding:0 16px"><div id="readiness-list"></div></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ── DTC LIST ── -->
-                <div class="card" style="margin-bottom:16px">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <div class="card-title-icon" style="background:rgba(239,68,68,0.1);color:#EF4444">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            Kode Kerusakan Aktif (DTC)
-                            <span id="dtc-total-badge"
-                                style="background:rgba(239,68,68,0.12);color:#EF4444;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:4px">0
-                                Kode</span>
-                        </div>
-                        <div style="display:flex;gap:8px;align-items:center">
-                            <span class="status-badge scan-animation" id="scan-status"
-                                style="background:rgba(6,182,212,0.1);color:var(--accent);font-size:10px">
-                                <div class="status-dot" style="background:var(--accent)"></div>
-                                Menunggu Scan
-                            </span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <!-- Loading state -->
-                        <div id="dtc-loading" style="text-align:center;padding:32px;display:none">
-                            <div
-                                style="width:48px;height:48px;border:4px solid #E2E8F0;border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 12px">
-                            </div>
-                            <div style="font-size:13px;color:var(--text-muted)">Membaca data dari ECU...</div>
-                        </div>
-                        <!-- Empty state -->
-                        <div id="dtc-empty" style="text-align:center;padding:40px;display:none">
-                            <div style="font-size:48px;margin-bottom:12px">✅</div>
-                            <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-bottom:6px">
-                                Tidak Ada Kode Kerusakan</div>
-                            <div style="font-size:13px;color:var(--text-muted)">Semua sistem kendaraan berfungsi normal.
-                            </div>
-                        </div>
-                        <!-- DTC list container -->
-                        <div id="dtc-list"></div>
-                    </div>
+                <!-- ══════ TAB 2: Jadwal Perawatan ══════ -->
+                <div class="tab-panel" id="panel-maintenance">
+                    <div id="maintenance-list"></div>
                 </div>
 
-                <!-- ── BOTTOM ROW: Freeze Frame + Readiness ── -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                    <!-- Freeze Frame Data -->
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">
-                                <div class="card-title-icon" style="background:rgba(59,130,246,0.1);color:#3B82F6">
-                                    <i class="fa-solid fa-camera"></i>
-                                </div>
-                                Freeze Frame Data
-                            </div>
-                            <span style="font-size:11px;color:var(--text-muted)">Saat DTC pertama terdeteksi</span>
-                        </div>
-                        <div class="card-body" style="padding:0">
-                            <table class="freeze-frame-table">
-                                <tbody>
-                                    <tr>
-                                        <td>Kecepatan Kendaraan</td>
-                                        <td id="ff-speed">68 km/h</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Engine RPM</td>
-                                        <td id="ff-rpm">2,340 RPM</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Suhu Pendingin</td>
-                                        <td id="ff-coolant">92 °C</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Posisi Throttle</td>
-                                        <td id="ff-throttle">45 %</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Tegangan Aki</td>
-                                        <td id="ff-voltage">12.8 V</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Suhu Udara Masuk</td>
-                                        <td id="ff-intake">38 °C</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Tekanan Manifold</td>
-                                        <td id="ff-map">98 kPa</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Short Term Fuel Trim</td>
-                                        <td id="ff-stft">+8.2 %</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                <!-- ══════ TAB 3: Riwayat Servis ══════ -->
+                <div class="tab-panel" id="panel-history">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <div style="font-size:15px;font-weight:700;color:var(--text-primary)"><i class="fa-solid fa-timeline" style="color:var(--accent);margin-right:6px"></i>Log Riwayat Servis</div>
+                        <button class="btn btn-primary btn-sm" onclick="openModal('add-history-modal')"><i class="fa-solid fa-plus"></i> Tambah Catatan Baru</button>
                     </div>
-
-                    <!-- OBD2 Readiness Monitors -->
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="card-title">
-                                <div class="card-title-icon" style="background:rgba(16,185,129,0.1);color:#10B981">
-                                    <i class="fa-solid fa-list-check"></i>
-                                </div>
-                                Monitor Readiness
-                            </div>
-                            <span style="font-size:11px;color:var(--text-muted)" id="readiness-summary">6/8 Siap</span>
-                        </div>
-                        <div class="card-body" style="padding:0 16px">
-                            <div id="readiness-list"></div>
-                        </div>
-                    </div>
+                    <div class="card"><div class="card-body" style="padding:8px 16px" id="history-list"><div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-inbox" style="font-size:32px;margin-bottom:8px;display:block;opacity:.4"></i>Belum ada catatan servis.</div></div></div>
                 </div>
 
             </main>
         </div>
     </div>
 
-    <!-- Clear DTC Confirmation Modal -->
+    <!-- Clear DTC Modal -->
     <div class="modal-overlay" id="clear-dtc-modal" style="display:none">
         <div class="modal-box">
-            <div class="modal-header">
-                <h2 class="modal-title" style="color:#EF4444"><i class="fa-solid fa-triangle-exclamation"
-                        style="margin-right:8px"></i>Konfirmasi Hapus DTC</h2>
-                <button class="close-btn" onclick="closeModal('clear-dtc-modal')"><i
-                        class="fa-solid fa-xmark"></i></button>
-            </div>
+            <div class="modal-header"><h2 class="modal-title" style="color:#EF4444"><i class="fa-solid fa-triangle-exclamation" style="margin-right:8px"></i>Konfirmasi Hapus DTC</h2><button class="close-btn" onclick="closeModal('clear-dtc-modal')"><i class="fa-solid fa-xmark"></i></button></div>
             <div class="modal-body">
-                <div class="alert-warning" style="margin-bottom:16px">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <strong>Perhatian!</strong> Menghapus DTC tidak memperbaiki masalah. Kode akan muncul kembali jika
-                    kerusakan belum diperbaiki.
-                </div>
-                <p style="font-size:14px;color:var(--text-secondary);line-height:1.7">
-                    Anda akan mengirim perintah <strong>CLEAR DTC</strong> ke perangkat ESP32. Ini akan menghapus semua
-                    kode kerusakan aktif dari ECU kendaraan <strong id="clear-vehicle-name">–</strong>.
-                </p>
-                <div
-                    style="margin-top:16px;background:#FEF9F0;border-radius:12px;padding:14px;border:1px solid rgba(245,158,11,0.3)">
-                    <div style="font-size:12px;font-weight:700;color:#92400E;margin-bottom:8px">Kode yang akan dihapus:
-                    </div>
-                    <div id="dtc-to-clear-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-                </div>
+                <div class="alert-warning" style="margin-bottom:16px"><i class="fa-solid fa-triangle-exclamation"></i> <strong>Perhatian!</strong> Menghapus DTC tidak memperbaiki masalah.</div>
+                <p style="font-size:14px;color:var(--text-secondary);line-height:1.7">Kirim perintah <strong>CLEAR DTC</strong> ke ESP32 untuk kendaraan <strong id="clear-vehicle-name">–</strong>.</p>
+                <div style="margin-top:16px;background:#FEF9F0;border-radius:12px;padding:14px;border:1px solid rgba(245,158,11,.3)"><div style="font-size:12px;font-weight:700;color:#92400E;margin-bottom:8px">Kode yang akan dihapus:</div><div id="dtc-to-clear-list" style="display:flex;flex-wrap:wrap;gap:6px"></div></div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('clear-dtc-modal')">Batal</button>
-                <button class="btn btn-danger" id="confirm-clear-btn" onclick="confirmClearDTC()">
-                    <i class="fa-solid fa-trash-can"></i> Ya, Hapus Semua DTC
-                </button>
-            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('clear-dtc-modal')">Batal</button><button class="btn btn-danger" id="confirm-clear-btn" onclick="confirmClearDTC()"><i class="fa-solid fa-trash-can"></i> Ya, Hapus</button></div>
         </div>
     </div>
 
-    <style>
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
+    <!-- Add History Modal -->
+    <div class="modal-overlay" id="add-history-modal" style="display:none">
+        <div class="modal-box">
+            <div class="modal-header"><h2 class="modal-title"><i class="fa-solid fa-plus-circle" style="margin-right:8px;color:var(--accent)"></i>Tambah Catatan Servis</h2><button class="close-btn" onclick="closeModal('add-history-modal')"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Tanggal</label><input type="date" class="form-input" id="hist-date"></div>
+                <div class="form-group"><label class="form-label">Odometer (km)</label><input type="number" class="form-input" id="hist-odo" placeholder="Misal: 45000"></div>
+                <div class="form-group"><label class="form-label">Jenis Pekerjaan</label><input type="text" class="form-input" id="hist-type" placeholder="Misal: Ganti Oli Mesin"></div>
+                <div class="form-group"><label class="form-label">Bengkel / Catatan</label><input type="text" class="form-input" id="hist-notes" placeholder="Misal: Bengkel Resmi Toyota"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('add-history-modal')">Batal</button><button class="btn btn-primary" onclick="addHistoryEntry()"><i class="fa-solid fa-check"></i> Simpan</button></div>
+        </div>
+    </div>
+
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
     <script src="app.js"></script>
     <script>
-        // ============================================================================
-        // DIAGNOSTIC PAGE LOGIC
-        // ============================================================================
+    // ============================================================================
+    // SERVICE & MAINTENANCE PAGE LOGIC
+    // ============================================================================
+    let activeDTCs = [];
+    let serviceHistory = JSON.parse(localStorage.getItem('carmonitor_service_history') || '[]');
 
-        let activeDTCs = [];
-        let healthChart;
+    const READINESS_MONITORS = [
+        {name:'Sistem Misfire',status:'ready'},{name:'Sistem Bahan Bakar',status:'ready'},
+        {name:'Komponen Komprehensif',status:'ready'},{name:'Katalis (Catalytic Conv.)',status:'not_ready'},
+        {name:'Sensor Oksigen (O2)',status:'ready'},{name:'Sistem Pemanas O2',status:'ready'},
+        {name:'EGR/VVT Sistem',status:'not_ready'},{name:'EVAP Sistem',status:'ready'},
+    ];
 
-        const READINESS_MONITORS = [
-            { name: 'Sistem Misfire', status: 'ready' },
-            { name: 'Sistem Bahan Bakar', status: 'ready' },
-            { name: 'Komponen Komprehensif', status: 'ready' },
-            { name: 'Katalis (Catalytic Conv.)', status: 'not_ready' },
-            { name: 'Sensor Oksigen (O2)', status: 'ready' },
-            { name: 'Sistem Pemanas O2', status: 'ready' },
-            { name: 'EGR/VVT Sistem', status: 'not_ready' },
-            { name: 'EVAP Sistem', status: 'ready' },
-        ];
+    const MAINTENANCE_ITEMS = [
+        {id:'oil',name:'Ganti Oli Mesin',icon:'fa-oil-can',color:'#F59E0B',current:8000,target:10000,unit:'km'},
+        {id:'sparkplug',name:'Ganti Busi',icon:'fa-bolt',color:'#8B5CF6',current:18000,target:20000,unit:'km'},
+        {id:'brakepad',name:'Cek Kampas Rem',icon:'fa-compact-disc',color:'#EF4444',current:28000,target:30000,unit:'km'},
+        {id:'airfilter',name:'Ganti Filter Udara',icon:'fa-wind',color:'#06B6D4',current:12000,target:15000,unit:'km'},
+        {id:'coolant',name:'Ganti Cairan Pendingin',icon:'fa-snowflake',color:'#3B82F6',current:38000,target:40000,unit:'km'},
+        {id:'timing',name:'Cek Timing Belt',icon:'fa-gears',color:'#10B981',current:55000,target:80000,unit:'km'},
+    ];
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const user = requireAuth(['user', 'admin']);
-            if (!user) return;
+    // ── Init ──
+    document.addEventListener('DOMContentLoaded', () => {
+        const user = requireAuth(['user','admin']);
+        if (!user) return;
+        populateUserUI(); initSidebar();
+        const v = AppState.currentVehicle;
+        document.getElementById('sidebar-vehicle-name').textContent = v?.vehicleName || 'Kendaraan';
+        document.getElementById('sidebar-device-id').textContent = v?.deviceId || 'ESP32';
+        document.getElementById('topbar-vehicle').textContent = v?.plateNumber || '–';
+        document.getElementById('hist-date').valueAsDate = new Date();
 
-            populateUserUI();
-            initSidebar();
+        renderMaintenance();
+        renderHistory();
+        renderReadiness();
+        startLiveData();
+        runFullScan();
+    });
 
-            const vehicle = AppState.currentVehicle;
-            const vname = vehicle?.vehicleName || 'Kendaraan Demo';
-            document.getElementById('sidebar-vehicle-name').textContent = vname;
-            document.getElementById('sidebar-device-id').textContent = vehicle?.deviceId || 'ESP32-DEMO';
-            document.getElementById('topbar-vehicle').textContent = vehicle?.plateNumber || '–';
-            document.getElementById('h-last-scan').textContent = 'Belum';
+    // ── Tab Switching ──
+    function switchTab(tabId) {
+        document.querySelectorAll('.service-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tabId));
+    }
 
-            // Init health chart
-            initHealthChart();
-
-            // Render readiness monitors
-            renderReadiness();
-
-            // Auto-scan on load
-            runFullScan();
+    // ── Live Data ──
+    function startLiveData() {
+        const deviceId = AppState.currentVehicle?.deviceId;
+        if (!deviceId) return;
+        fetchLiveSensorData(deviceId, d => {
+            document.getElementById('ld-rpm').textContent = d.rpm || 0;
+            document.getElementById('ld-temp').textContent = d.engineTemp || 0;
+            document.getElementById('ld-speed').textContent = d.speed || 0;
+            document.getElementById('ld-load').textContent = d.engineLoad || 0;
+            document.getElementById('ld-voltage').textContent = (d.batteryVoltage || 0).toFixed(1);
+            document.getElementById('ld-throttle').textContent = d.throttlePos || 0;
+            // Update freeze frame with live data
+            document.getElementById('ff-speed').textContent = (d.speed||0)+' km/h';
+            document.getElementById('ff-rpm').textContent = (d.rpm||0).toLocaleString()+' RPM';
+            document.getElementById('ff-coolant').textContent = (d.engineTemp||0)+' °C';
+            document.getElementById('ff-throttle').textContent = (d.throttlePos||0)+' %';
+            document.getElementById('ff-voltage').textContent = (d.batteryVoltage||0).toFixed(1)+' V';
+            document.getElementById('ff-intake').textContent = (d.intakeTemp||0)+' °C';
+            document.getElementById('ff-map').textContent = '– kPa';
+            document.getElementById('ff-stft').textContent = '– %';
         });
+    }
 
-        function initHealthChart() {
-            const ctx = document.getElementById('health-donut')?.getContext('2d');
-            if (!ctx) return;
-            const score = 72;
-            const color = score >= 85 ? '#10B981' : score >= 65 ? '#F59E0B' : '#EF4444';
-            healthChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    datasets: [{
-                        data: [score, 100 - score],
-                        backgroundColor: [color, '#F1F5F9'],
-                        borderWidth: 0,
-                        cutout: '75%',
-                    }]
-                },
-                options: {
-                    responsive: false,
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
-                    animation: { duration: 800 },
-                }
-            });
-        }
+    // ── Health Score Gauge (SVG) ──
+    function updateHealthScore(score) {
+        const el = document.getElementById('health-gauge-circle');
+        const r = 58, c = 2 * Math.PI * r; // ~364.42
+        const offset = c - (score / 100) * c;
+        const color = score >= 85 ? '#10B981' : score >= 65 ? '#F59E0B' : '#EF4444';
+        el.setAttribute('stroke-dasharray', c);
+        el.setAttribute('stroke-dashoffset', offset);
+        el.setAttribute('stroke', color);
+        document.getElementById('health-score').textContent = score;
+        const lbl = document.getElementById('health-label');
+        const desc = document.getElementById('health-desc');
+        if (score >= 85) { lbl.textContent='Kondisi Sangat Baik'; lbl.className='text-emerald-500'; desc.textContent='Tidak ada masalah terdeteksi. Kendaraan prima.'; }
+        else if (score >= 65) { lbl.textContent='Kondisi Baik'; lbl.className='text-amber-500'; desc.textContent='Terdapat beberapa item yang perlu diperhatikan.'; }
+        else { lbl.textContent='Perlu Perhatian'; lbl.className='text-rose-500'; desc.textContent='Beberapa sistem memerlukan pemeriksaan segera.'; }
+    }
 
-        function renderReadiness() {
-            const container = document.getElementById('readiness-list');
-            if (!container) return;
-            const readyCount = READINESS_MONITORS.filter(m => m.status === 'ready').length;
-            document.getElementById('readiness-summary').textContent = `${readyCount}/${READINESS_MONITORS.length} Siap`;
-            document.getElementById('h-readiness').textContent = `${readyCount}/${READINESS_MONITORS.length}`;
+    // ── Readiness ──
+    function renderReadiness() {
+        const c = document.getElementById('readiness-list'); if(!c) return;
+        const ready = READINESS_MONITORS.filter(m=>m.status==='ready').length;
+        document.getElementById('readiness-summary').textContent = `${ready}/${READINESS_MONITORS.length} Siap`;
+        c.innerHTML = READINESS_MONITORS.map(m=>`<div class="readiness-item"><span style="color:var(--text-secondary)">${m.name}</span>${m.status==='ready'?'<span class="status-badge status-online" style="font-size:10px"><div class="status-dot"></div>Siap</span>':'<span class="status-badge status-warning" style="font-size:10px"><div class="status-dot"></div>Belum Siap</span>'}</div>`).join('');
+    }
 
-            container.innerHTML = READINESS_MONITORS.map(m => `
-        <div class="readiness-item">
-            <span style="font-size:13px;color:var(--text-secondary)">${m.name}</span>
-            ${m.status === 'ready'
-                    ? '<span class="status-badge status-online" style="font-size:10px"><div class="status-dot"></div>Siap</span>'
-                    : '<span class="status-badge status-warning" style="font-size:10px"><div class="status-dot"></div>Belum Siap</span>'
-                }
-        </div>
-    `).join('');
-        }
-
-        function runFullScan() {
-            const btn = document.getElementById('scan-btn');
-            setButtonLoading(btn, true);
-            document.getElementById('dtc-loading').style.display = 'block';
-            document.getElementById('dtc-list').innerHTML = '';
-            document.getElementById('dtc-empty').style.display = 'none';
-
-            const statusEl = document.getElementById('scan-status');
-            statusEl.innerHTML = '<div class="status-dot" style="background:var(--accent)"></div>Sedang Scan...';
-            statusEl.className = 'status-badge scan-animation';
-            statusEl.style.background = 'rgba(6,182,212,0.1)';
-            statusEl.style.color = 'var(--accent)';
-
-            const deviceId = AppState.currentVehicle?.deviceId || 'ESP32-DEMO';
-
-            fetchDTCCodes(deviceId, (dtcs) => {
-                activeDTCs = dtcs || [];
-                setButtonLoading(btn, false, '<i class="fa-solid fa-magnifying-glass-chart"></i> Scan Sekarang');
-                document.getElementById('dtc-loading').style.display = 'none';
-                document.getElementById('h-last-scan').textContent = 'Baru saja';
-
-                if (activeDTCs.length === 0) {
-                    document.getElementById('dtc-empty').style.display = 'block';
-                    document.getElementById('dtc-total-badge').textContent = '0 Kode';
-                    updateHealthScore(100);
-                } else {
-                    renderDTCList(activeDTCs);
-                    document.getElementById('dtc-total-badge').textContent = `${activeDTCs.length} Kode`;
-                    document.getElementById('h-dtc-count').textContent = activeDTCs.length;
-                    updateHealthScore(Math.max(30, 100 - activeDTCs.length * 15));
-                }
-
-                statusEl.innerHTML = `<div class="status-dot" style="background:#10B981"></div>Scan Selesai`;
-                statusEl.style.color = '#10B981';
-                statusEl.style.background = 'rgba(16,185,129,0.1)';
-                statusEl.className = 'status-badge';
-                showToast(`Scan selesai. Ditemukan ${activeDTCs.length} kode kerusakan.`, activeDTCs.length > 0 ? 'warning' : 'success');
-            });
-        }
-
-        function updateHealthScore(score) {
-            document.getElementById('health-score').textContent = score;
-            const color = score >= 85 ? '#10B981' : score >= 65 ? '#F59E0B' : '#EF4444';
-            const labelEl = document.getElementById('health-label');
-            const descEl = document.getElementById('health-desc');
-
-            if (score >= 85) {
-                labelEl.style.color = '#10B981';
-                labelEl.textContent = 'Kondisi Sangat Baik';
-                descEl.textContent = 'Tidak ada masalah yang terdeteksi. Kendaraan dalam kondisi prima.';
-            } else if (score >= 65) {
-                labelEl.style.color = '#F59E0B';
-                labelEl.textContent = 'Kondisi Baik';
-                descEl.textContent = 'Terdapat beberapa kode kerusakan aktif yang perlu diperhatikan.';
-            } else {
-                labelEl.style.color = '#EF4444';
-                labelEl.textContent = 'Perlu Perhatian';
-                descEl.textContent = 'Beberapa sistem kendaraan memerlukan pemeriksaan segera.';
-            }
-
-            if (healthChart) {
-                healthChart.data.datasets[0].data = [score, 100 - score];
-                healthChart.data.datasets[0].backgroundColor = [color, '#F1F5F9'];
-                healthChart.update();
-            }
-        }
-
-        function renderDTCList(dtcs) {
-            const container = document.getElementById('dtc-list');
-
-            const severityConfig = {
-                danger: { bg: 'rgba(239,68,68,0.08)', iconBg: 'rgba(239,68,68,0.12)', iconColor: '#EF4444', label: 'Kritis', labelClass: 'status-danger' },
-                warning: { bg: 'rgba(245,158,11,0.06)', iconBg: 'rgba(245,158,11,0.12)', iconColor: '#F59E0B', label: 'Peringatan', labelClass: 'status-warning' },
-                info: { bg: 'rgba(6,182,212,0.06)', iconBg: 'rgba(6,182,212,0.12)', iconColor: '#06B6D4', label: 'Informasi', labelClass: 'status-online' },
-            };
-
-            container.innerHTML = dtcs.map((dtc, i) => {
-                const cfg = severityConfig[dtc.severity] || severityConfig.warning;
-                return `
-        <div class="dtc-card" id="dtc-card-${i}" style="background:${cfg.bg}">
-            <div class="dtc-icon" style="background:${cfg.iconBg};color:${cfg.iconColor}">
-                <i class="fa-solid ${dtc.severity === 'danger' ? 'fa-circle-exclamation' : 'fa-triangle-exclamation'}"></i>
-            </div>
-            <div style="flex:1;min-width:0">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-                    <span class="dtc-code">${dtc.code}</span>
-                    <span class="status-badge ${cfg.labelClass}" style="font-size:10px">${cfg.label}</span>
-                    <span style="font-size:11px;color:var(--text-muted);margin-left:auto">${timeAgo(dtc.timestamp)}</span>
-                </div>
-                <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:2px">${dtc.description}</div>
-                <div style="font-size:11px;color:var(--text-muted)">
-                    <i class="fa-solid fa-tag" style="margin-right:4px"></i>${dtc.system}
-                </div>
-            </div>
-            <button class="btn btn-secondary btn-xs" onclick="showFreezeFrame('${dtc.code}')" title="Freeze Frame">
-                <i class="fa-solid fa-camera"></i>
-            </button>
-        </div>`;
-            }).join('');
-        }
-
-        function showFreezeFrame(code) {
-            showToast(`Menampilkan freeze frame untuk ${code}`, 'info');
-        }
-
-        function handleClearDTC() {
-            if (activeDTCs.length === 0) {
-                showToast('Tidak ada DTC aktif untuk dihapus.', 'info');
-                return;
-            }
-            // Populate codes in modal
-            const list = document.getElementById('dtc-to-clear-list');
-            list.innerHTML = activeDTCs.map(d => `<span class="dtc-code">${d.code}</span>`).join('');
-            document.getElementById('clear-vehicle-name').textContent = AppState.currentVehicle?.vehicleName || 'Kendaraan';
-            openModal('clear-dtc-modal');
-        }
-
-        async function confirmClearDTC() {
-            const btn = document.getElementById('confirm-clear-btn');
-            setButtonLoading(btn, true);
-
-            const deviceId = AppState.currentVehicle?.deviceId || 'ESP32-DEMO';
-
-            try {
-                await sendClearDTCCommand(deviceId);
-                closeModal('clear-dtc-modal');
-                showToast('Semua kode kerusakan berhasil dihapus! ✅', 'success');
-
-                // Clear the list
-                activeDTCs = [];
-                document.getElementById('dtc-list').innerHTML = '';
-                document.getElementById('dtc-empty').style.display = 'block';
-                document.getElementById('dtc-total-badge').textContent = '0 Kode';
-                document.getElementById('h-dtc-count').textContent = '0';
+    // ── OBD2 Scan ──
+    function runFullScan() {
+        const btn = document.getElementById('scan-btn'); setButtonLoading(btn, true);
+        document.getElementById('dtc-loading').style.display='block';
+        document.getElementById('dtc-list').innerHTML='';
+        document.getElementById('dtc-empty').style.display='none';
+        const st = document.getElementById('scan-status');
+        st.innerHTML='<div class="status-dot" style="background:var(--accent)"></div>Sedang Scan...';
+        st.className='status-badge scan-animation';
+        const deviceId = AppState.currentVehicle?.deviceId || 'ESP32-DEMO';
+        fetchDTCCodes(deviceId, dtcs => {
+            activeDTCs = dtcs || [];
+            setButtonLoading(btn, false, '<i class="fa-solid fa-magnifying-glass-chart"></i> Scan OBD2');
+            document.getElementById('dtc-loading').style.display='none';
+            if (!activeDTCs.length) {
+                document.getElementById('dtc-empty').style.display='block';
+                document.getElementById('dtc-total-badge').textContent='0 Kode';
+                document.getElementById('sum-dtc').textContent='0';
                 updateHealthScore(100);
-            } catch (err) {
-                showToast('Gagal mengirim perintah ke perangkat. Coba lagi.', 'error');
-            } finally {
-                setButtonLoading(btn, false, '<i class="fa-solid fa-trash-can"></i> Ya, Hapus Semua DTC');
+            } else {
+                renderDTCList(activeDTCs);
+                document.getElementById('dtc-total-badge').textContent=activeDTCs.length+' Kode';
+                document.getElementById('sum-dtc').textContent=activeDTCs.length;
+                updateHealthScore(Math.max(30, 100 - activeDTCs.length * 15));
             }
-        }
+            st.innerHTML='<div class="status-dot" style="background:#10B981"></div>Scan Selesai';
+            st.style.color='#10B981'; st.style.background='rgba(16,185,129,.1)'; st.className='status-badge';
+            updateSummaryWarnings();
+            showToast(`Scan selesai. ${activeDTCs.length} kode kerusakan.`, activeDTCs.length?'warning':'success');
+        });
+    }
+
+    function renderDTCList(dtcs) {
+        const c = document.getElementById('dtc-list');
+        const cfg = {danger:{bg:'rgba(239,68,68,.08)',iconBg:'rgba(239,68,68,.12)',iconColor:'#EF4444',label:'Kritis',cls:'status-danger'},warning:{bg:'rgba(245,158,11,.06)',iconBg:'rgba(245,158,11,.12)',iconColor:'#F59E0B',label:'Peringatan',cls:'status-warning'},info:{bg:'rgba(6,182,212,.06)',iconBg:'rgba(6,182,212,.12)',iconColor:'#06B6D4',label:'Informasi',cls:'status-online'}};
+        c.innerHTML = dtcs.map((d,i)=>{const s=cfg[d.severity]||cfg.warning; return `<div class="dtc-card" style="background:${s.bg}"><div class="dtc-icon" style="background:${s.iconBg};color:${s.iconColor}"><i class="fa-solid ${d.severity==='danger'?'fa-circle-exclamation':'fa-triangle-exclamation'}"></i></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"><span class="dtc-code">${d.code}</span><span class="status-badge ${s.cls}" style="font-size:10px">${s.label}</span><span style="font-size:11px;color:var(--text-muted);margin-left:auto">${timeAgo(d.timestamp)}</span></div><div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:2px">${d.description}</div><div style="font-size:11px;color:var(--text-muted)"><i class="fa-solid fa-tag" style="margin-right:4px"></i>${d.system}</div></div></div>`;}).join('');
+    }
+
+    function handleClearDTC() {
+        if (!activeDTCs.length) { showToast('Tidak ada DTC aktif.','info'); return; }
+        document.getElementById('dtc-to-clear-list').innerHTML = activeDTCs.map(d=>`<span class="dtc-code">${d.code}</span>`).join('');
+        document.getElementById('clear-vehicle-name').textContent = AppState.currentVehicle?.vehicleName || 'Kendaraan';
+        openModal('clear-dtc-modal');
+    }
+
+    async function confirmClearDTC() {
+        const btn = document.getElementById('confirm-clear-btn'); setButtonLoading(btn, true);
+        try {
+            await sendClearDTCCommand(AppState.currentVehicle?.deviceId || 'ESP32-DEMO');
+            closeModal('clear-dtc-modal');
+            showToast('Semua DTC berhasil dihapus! ✅','success');
+            activeDTCs = []; document.getElementById('dtc-list').innerHTML='';
+            document.getElementById('dtc-empty').style.display='block';
+            document.getElementById('dtc-total-badge').textContent='0 Kode';
+            document.getElementById('sum-dtc').textContent='0';
+            updateHealthScore(100); updateSummaryWarnings();
+        } catch(e) { showToast('Gagal mengirim perintah.','error'); }
+        finally { setButtonLoading(btn, false, '<i class="fa-solid fa-trash-can"></i> Ya, Hapus'); }
+    }
+
+    // ── Maintenance ──
+    function renderMaintenance() {
+        const c = document.getElementById('maintenance-list');
+        c.innerHTML = MAINTENANCE_ITEMS.map(m => {
+            const pct = Math.min((m.current / m.target) * 100, 100);
+            const remaining = m.target - m.current;
+            let barColor, statusLabel;
+            if (pct >= 95) { barColor='bg-rose-500'; statusLabel='<span class="text-rose-500 font-bold text-xs">⚠ Lewat Jadwal</span>'; }
+            else if (pct >= 75) { barColor='bg-amber-500'; statusLabel='<span class="text-amber-500 font-bold text-xs">⏳ Mendekati</span>'; }
+            else { barColor='bg-emerald-500'; statusLabel='<span class="text-emerald-500 font-bold text-xs">✓ Aman</span>'; }
+            return `<div class="maint-item">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                        <div style="width:38px;height:38px;border-radius:10px;background:${m.color}15;color:${m.color};display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fa-solid ${m.icon}"></i></div>
+                        <div><div style="font-size:14px;font-weight:700;color:var(--text-primary)">${m.name}</div><div style="font-size:11px;color:var(--text-muted)">Interval: ${m.target.toLocaleString()} ${m.unit}</div></div>
+                    </div>
+                    ${statusLabel}
+                </div>
+                <div class="maint-progress-track"><div class="maint-progress-fill ${barColor}" style="width:${pct}%"></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-size:12px;color:var(--text-muted)">${m.current.toLocaleString()} / ${m.target.toLocaleString()} ${m.unit} · Sisa ${remaining.toLocaleString()} ${m.unit}</span>
+                    <button class="btn btn-outline btn-xs" onclick="markDone('${m.id}')"><i class="fa-solid fa-check"></i> Tandai Selesai</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function markDone(id) {
+        const item = MAINTENANCE_ITEMS.find(m=>m.id===id);
+        if (item) { item.current = 0; renderMaintenance(); updateSummaryWarnings(); showToast(`${item.name} ditandai selesai! ✅`,'success'); }
+    }
+
+    function updateSummaryWarnings() {
+        const warnings = MAINTENANCE_ITEMS.filter(m => (m.current/m.target)*100 >= 75).length;
+        document.getElementById('sum-warnings').textContent = warnings;
+    }
+
+    // ── Service History ──
+    function renderHistory() {
+        const c = document.getElementById('history-list');
+        if (!serviceHistory.length) { c.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)"><i class="fa-solid fa-inbox" style="font-size:32px;margin-bottom:8px;display:block;opacity:.4"></i>Belum ada catatan servis.</div>'; return; }
+        c.innerHTML = serviceHistory.sort((a,b)=>new Date(b.date)-new Date(a.date)).map(h=>`<div class="history-row">
+            <div class="history-dot"></div>
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px">
+                    <span style="font-size:13px;font-weight:700;color:var(--text-primary)">${h.type}</span>
+                    <span style="font-size:11px;color:var(--text-muted);margin-left:auto">${h.date}</span>
+                </div>
+                <div style="font-size:12px;color:var(--text-secondary)"><i class="fa-solid fa-road" style="margin-right:4px"></i>${Number(h.odo).toLocaleString()} km &nbsp;·&nbsp; <i class="fa-solid fa-location-dot" style="margin-right:4px"></i>${h.notes||'–'}</div>
+            </div>
+            <button class="btn btn-secondary btn-xs" onclick="deleteHistory('${h.id}')" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+        </div>`).join('');
+    }
+
+    function addHistoryEntry() {
+        const date = document.getElementById('hist-date').value;
+        const odo = document.getElementById('hist-odo').value;
+        const type = document.getElementById('hist-type').value;
+        const notes = document.getElementById('hist-notes').value;
+        if (!date||!odo||!type) { showToast('Lengkapi semua field.','warning'); return; }
+        serviceHistory.push({id:Date.now().toString(),date,odo,type,notes});
+        localStorage.setItem('carmonitor_service_history', JSON.stringify(serviceHistory));
+        closeModal('add-history-modal'); renderHistory();
+        document.getElementById('hist-odo').value=''; document.getElementById('hist-type').value=''; document.getElementById('hist-notes').value='';
+        showToast('Catatan servis berhasil ditambahkan! ✅','success');
+    }
+
+    function deleteHistory(id) {
+        serviceHistory = serviceHistory.filter(h=>h.id!==id);
+        localStorage.setItem('carmonitor_service_history', JSON.stringify(serviceHistory));
+        renderHistory(); showToast('Catatan dihapus.','info');
+    }
     </script>
 </body>
-
 </html>
